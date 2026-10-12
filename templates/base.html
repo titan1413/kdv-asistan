@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}KDV Asistan{% endblock %}</title>
+    <link rel="icon" type="image/png" href="/KDV_Web/assets/favicon.png">
+    <link rel="stylesheet" href="/static/css/tailwind.css?v={{ update_version }}">
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="/api/client-config.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        [x-cloak] { display: none !important; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a1628 0%, #0e2240 45%, #0c1e3a 100%);
+        }
+    </style>
+</head>
+<body x-data="{ sidebarOpen: false }">
+    <!-- Main Content -->
+    <main class="w-full py-4 px-4 sm:px-6 lg:px-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    {% block footer %}
+    {% endblock %}
+
+    {% block scripts %}{% endblock %}
+
+    <script>
+    (function() {
+        const _REASON_MESSAGES = {
+            'expired':    'Oturumunuzun süresi doldu (8 saat). Lütfen tekrar giriş yapın.',
+            'idle':       '90 dakika işlem yapılmadığı için oturum otomatik kapatıldı.',
+            'not_found':  'Oturumunuz geçersiz. Lütfen tekrar giriş yapın.',
+            'revoked':    'Başka bir cihazdan giriş yapıldığı için oturumunuz sonlandırıldı.',
+        };
+
+        async function verifySession() {
+            const token = localStorage.getItem('session_token');
+            if (!token) return;
+            try {
+                const res = await fetch('/api/verify-session', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                if (data.valid === false) {
+                    localStorage.removeItem('session_token');
+                    try {
+                        const _sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+                        await _sb.auth.signOut();
+                    } catch (_) {}
+                    const msg = _REASON_MESSAGES[data.reason] || 'Oturumunuz sonlandırıldı.';
+                    alert(msg);
+                    window.location.href = '/login';
+                }
+            } catch (e) {}
+        }
+
+        verifySession();
+        setInterval(verifySession, 60000);
+
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'visible') {
+                verifySession();
+            }
+        });
+    })();
+    </script>
+</body>
+</html>

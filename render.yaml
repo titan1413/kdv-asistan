@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: kdv-asistan
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    plan: free
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        value: https://sizin-domaininiz.com
+      - key: SESSION_TTL_HOURS
+        value: 8
+      - key: SESSION_IDLE_MINUTES
+        value: 90

@@ -1,0 +1,34 @@
+<!-- Tab Navigation -->
+    <div class="border-b border-white/10 mb-3">
+        <nav class="flex items-center space-x-2 px-4 overflow-x-auto">
+            <button @click="switchTab('indirilecek')"
+                    :class="activeTab === 'indirilecek' ? 'tab-button-active' : 'tab-button-inactive'"
+                    class="py-2.5 px-4 rounded-t-lg font-bold text-sm transition-all whitespace-nowrap border border-b-0 shadow-sm">
+                <i class="fas fa-download mr-1.5"></i>1. Indirilecek KDV Listeleri
+            </button>
+            <i class="fas fa-chevron-right text-white/25 text-xs"></i>
+            <button @click="switchTab('yuklenilen')"
+                    :class="activeTab === 'yuklenilen' ? 'tab-button-active' : 'tab-button-inactive'"
+                    class="py-2.5 px-4 rounded-t-lg font-bold text-sm transition-all whitespace-nowrap border border-b-0 shadow-sm">
+                <i class="fas fa-upload mr-1.5"></i>2. Yuklenilen KDV Listeleri
+            </button>
+            <i class="fas fa-chevron-right text-white/25 text-xs"></i>
+            <button @click="switchTab('hazir')"
+                    :class="activeTab === 'hazir' ? 'tab-button-active' : 'tab-button-inactive'"
+                    class="py-2.5 px-4 rounded-t-lg font-bold text-sm transition-all whitespace-nowrap border border-b-0 shadow-sm">
+                <i class="fas fa-file-invoice mr-1.5"></i>3. Hazır Faturalar
+            </button>
+            <i class="fas fa-chevron-right text-white/25 text-xs"></i>
+            <button @click="switchTab('imalat')"
+                    :class="activeTab === 'imalat' ? 'tab-button-active' : 'tab-button-inactive'"
+                    class="py-2.5 px-4 rounded-t-lg font-bold text-sm transition-all whitespace-nowrap border border-b-0 shadow-sm">
+                <i class="fas fa-industry mr-1.5"></i>4. Imalat Tablosu
+            </button>
+            <i class="fas fa-chevron-right text-white/25 text-xs"></i>
+            <button @click="switchTab('sonuc')"
+                    :class="activeTab === 'sonuc' ? 'tab-button-active' : 'tab-button-inactive'"
+                    class="py-2.5 px-4 rounded-t-lg font-bold text-sm transition-all whitespace-nowrap border border-b-0 shadow-sm">
+                <i class="fas fa-chart-bar mr-1.5"></i>5. SONUÇ
+            </button>
+        </nav>
+    </div>

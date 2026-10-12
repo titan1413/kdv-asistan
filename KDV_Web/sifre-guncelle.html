@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Şifre Yenileme | 3065 KDV Asistanı</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --apple-blue: #007AFF;
+            --apple-gray: #f5f5f7;
+            --text-dark: #1d1d1f;
+        }
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background-color: var(--apple-gray);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: var(--text-dark);
+            background: radial-gradient(circle at top right, #e2e2e7, #f5f5f7);
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            padding: 45px;
+            border-radius: 35px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.08);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.4);
+        }
+        /* Logo Ayarı */
+        .logo {
+            width: 120px;
+            height: auto;
+            margin-bottom: 20px;
+            object-fit: contain;
+        }
+        h2 { font-weight: 600; font-size: 26px; margin-bottom: 10px; letter-spacing: -0.8px; }
+        .desc { font-size: 14px; color: #6e6e73; margin-bottom: 35px; line-height: 1.4; }
+        .input-group { margin-bottom: 22px; text-align: left; }
+        label { font-size: 11px; font-weight: 700; margin-left: 5px; color: #86868b; text-transform: uppercase; letter-spacing: 0.5px; }
+        .input-wrapper { position: relative; display: flex; align-items: center; margin-top: 8px; }
+        input {
+            width: 100%;
+            padding: 14px 45px 14px 16px;
+            border: 1px solid #d2d2d7;
+            border-radius: 14px;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.9);
+            box-sizing: border-box;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        input:focus { border-color: var(--apple-blue); box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.15); }
+        .toggle-password {
+            position: absolute;
+            right: 15px;
+            cursor: pointer;
+            font-size: 18px;
+            opacity: 0.5;
+            transition: 0.2s;
+        }
+        .toggle-password:hover { opacity: 1; }
+        button {
+            width: 100%;
+            padding: 16px;
+            background-color: var(--apple-blue);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        button:hover { background-color: #0062cc; transform: translateY(-1px); }
+        #status-msg { margin-top: 25px; font-size: 13px; padding: 12px; border-radius: 10px; display: none; }
+        .success { background: #eafaf1; color: #1a7f37; display: block !important; border: 1px solid #d4f2e1; }
+        .error { background: #fff2f2; color: #d70015; display: block !important; border: 1px solid #ffdbdb; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <img src="assets/logo.png" alt="3065 Logo" class="logo">
+        
+        <h2>Yeni Şifre</h2>
+        <p class="desc">Hesabınız için yeni ve güvenli <br> bir şifre belirleyin.</p>
+
+        <div class="input-group">
+            <label>YENİ ŞİFRE</label>
+            <div class="input-wrapper">
+                <input type="password" id="pass1" placeholder="••••••••">
+                <span class="toggle-password" onclick="toggleVisibility('pass1', this)">👁️</span>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label>ŞİFREYİ ONAYLA</label>
+            <div class="input-wrapper">
+                <input type="password" id="pass2" placeholder="••••••••">
+                <span class="toggle-password" onclick="toggleVisibility('pass2', this)">👁️</span>
+            </div>
+        </div>
+
+        <button onclick="updatePassword()" id="submit-btn">Şifreyi Güncelle</button>
+        <div id="status-msg"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="/api/client-config.js"></script>
+    <script>
+        const supabaseClient = supabase.createClient(
+            window.SUPABASE_URL || "",
+            window.SUPABASE_ANON_KEY || ""
+        );
+
+        const btn = document.getElementById('submit-btn');
+        const msg = document.getElementById('status-msg');
+
+        // Form başlangıçta kilitli — session hazır olunca açılır
+        btn.disabled = true;
+        btn.innerText = "Oturum doğrulanıyor...";
+
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+            if (event === 'PASSWORD_RECOVERY') {
+                btn.disabled = false;
+                btn.innerText = "Şifreyi Güncelle";
+            } else if (!session) {
+                btn.disabled = true;
+                msg.innerText = "Bağlantı süresi dolmuş olabilir. Lütfen şifre sıfırlama işlemini tekrar başlatın.";
+                msg.className = "error";
+            }
+        });
+
+        function toggleVisibility(inputId, element) {
+            const input = document.getElementById(inputId);
+            if (input.type === "password") {
+                input.type = "text";
+                element.innerText = "🔒"; 
+            } else {
+                input.type = "password";
+                element.innerText = "👁️";
+            }
+        }
+
+        async function updatePassword() {
+            const p1 = document.getElementById('pass1').value;
+            const p2 = document.getElementById('pass2').value;
+
+            if (!p1 || p1 !== p2 || p1.length < 6) {
+                msg.innerText = "Lütfen şifrelerin eşleştiğinden ve en az 6 karakter olduğundan emin olun.";
+                msg.className = "error";
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = "Güncelleniyor...";
+
+            const { error } = await supabaseClient.auth.updateUser({ password: p1 });
+
+            if (error) {
+                msg.innerText = "Hata: " + error.message;
+                msg.className = "error";
+                btn.disabled = false;
+                btn.innerText = "Şifreyi Güncelle";
+            } else {
+                await supabaseClient.auth.signOut();
+
+                document.querySelector('.input-group:nth-of-type(1)').style.display = "none";
+                document.querySelector('.input-group:nth-of-type(2)').style.display = "none";
+                btn.style.display = "none";
+                
+                msg.innerHTML = `
+                    <div style="font-size: 40px; margin-bottom: 10px;">✅</div>
+                    <strong>Şifreniz Başarıyla Güncellendi</strong><br>
+                    Güvenliğiniz için oturumunuz kapatıldı.<br><br>
+                    <small>Şimdi uygulamaya dönüp giriş yapabilirsiniz.</small>
+                `;
+                msg.className = "success";
+                
+                setTimeout(() => {
+                    window.location.href = "https://3065.com.tr";
+                }, 5000);
+            }
+        }
+    </script>
+</body>
+</html>

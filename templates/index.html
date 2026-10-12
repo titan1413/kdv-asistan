@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+
+{% block title %}KDV Asistan - Ana Sayfa{% endblock %}
+
+{% block navigation %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+const _supabase = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+
+document.addEventListener('DOMContentLoaded', async function() {
+    // Check session
+    const { data: { session } } = await _supabase.auth.getSession();
+    
+    if (!session) {
+        // No session, redirect to login
+        window.location.href = '/login';
+    }
+
+    // Session token doğrulaması base.html'de otomatik çalışıyor
+});
+
+async function logout() {
+    const btn = document.getElementById('logoutBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Çıkış yapılıyor...'; }
+    try {
+        const token = localStorage.getItem('session_token');
+        if (token) {
+            await fetch('/api/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) });
+            localStorage.removeItem('session_token');
+        }
+        await _supabase.auth.signOut();
+    } catch (e) {}
+    window.location.href = '/login';
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        overflow: hidden;
+        background: linear-gradient(135deg, #0a1628 0%, #0e2240 45%, #0c1e3a 100%) !important;
+    }
+    @supports not (height: 100dvh) {
+        .index-main { height: calc(100vh - 2rem); }
+    }
+
+    /* Ambient glow orbs */
+    .index-main::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background:
+            radial-gradient(ellipse 55% 45% at 15% 15%, rgba(59,130,246,0.09) 0%, transparent 60%),
+            radial-gradient(ellipse 45% 40% at 85% 85%, rgba(139,92,246,0.09) 0%, transparent 60%),
+            radial-gradient(ellipse 35% 35% at 50% 50%, rgba(20,184,166,0.05) 0%, transparent 65%);
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    .app-wrapper {
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Logout button */
+    #logoutBtn {
+        background: rgba(255,255,255,0.07);
+        border: 1px solid rgba(255,255,255,0.13);
+        color: rgba(255,255,255,0.6);
+        font-size: 13px;
+        font-weight: 600;
+        padding: 8px 16px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        cursor: pointer;
+        transition: background 0.2s, border-color 0.2s, color 0.2s;
+    }
+    #logoutBtn:hover {
+        background: rgba(239,68,68,0.15);
+        border-color: rgba(239,68,68,0.35);
+        color: #fca5a5;
+    }
+    #logoutBtn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Header */
+    .app-subtitle {
+        font-size: 13.5px;
+        color: rgba(192,192,192,0.7);
+        letter-spacing: 0.02em;
+    }
+
+    /* ── Cards ── */
+    .menu-card {
+        display: block;
+        border-radius: 16px;
+        text-decoration: none;
+        transition: transform 0.22s ease;
+        cursor: pointer;
+    }
+    .menu-card:hover {
+        transform: translateY(-5px);
+    }
+    .menu-card.card-disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+        pointer-events: none;
+    }
+
+    .card-glass {
+        background: rgba(255,255,255,0.055);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 16px;
+        padding: 20px 20px 18px;
+        height: 100%;
+        transition: background 0.22s, border-color 0.22s, box-shadow 0.22s;
+    }
+    .menu-card:hover .card-glass {
+        background: rgba(255,255,255,0.09);
+    }
+
+    /* Per-card accent colors */
+    .card-blue:hover   .card-glass { border-color: rgba(96,165,250,0.35); box-shadow: 0 12px 36px rgba(59,130,246,0.18); }
+    .card-teal:hover   .card-glass { border-color: rgba(45,212,191,0.35); box-shadow: 0 12px 36px rgba(20,184,166,0.18); }
+    .card-emerald:hover .card-glass { border-color: rgba(52,211,153,0.35); box-shadow: 0 12px 36px rgba(16,185,129,0.18); }
+    .card-amber:hover  .card-glass { border-color: rgba(251,191,36,0.35); box-shadow: 0 12px 36px rgba(245,158,11,0.18); }
+    .card-violet:hover .card-glass { border-color: rgba(167,139,250,0.35); box-shadow: 0 12px 36px rgba(139,92,246,0.18); }
+
+    /* Icon wrapper */
+    .icon-box {
+        width: 46px;
+        height: 46px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 19px;
+        color: #fff;
+        margin-bottom: 14px;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+        flex-shrink: 0;
+    }
+    .icon-blue    { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+    .icon-teal    { background: linear-gradient(135deg, #14b8a6, #0d9488); }
+    .icon-gray    { background: linear-gradient(135deg, #64748b, #475569); }
+    .icon-emerald { background: linear-gradient(135deg, #10b981, #059669); }
+    .icon-amber   { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    .icon-violet  { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+
+    /* Card text */
+    .card-title {
+        font-size: 14.5px;
+        font-weight: 700;
+        color: rgba(255,255,255,0.88);
+        margin-bottom: 7px;
+        line-height: 1.35;
+    }
+    .card-desc {
+        font-size: 12.5px;
+        color: rgba(255,255,255,0.42);
+        line-height: 1.55;
+        margin-bottom: 14px;
+    }
+
+    /* CTA row */
+    .card-cta {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12.5px;
+        font-weight: 600;
+        transition: gap 0.2s;
+    }
+    .menu-card:hover .card-cta { gap: 9px; }
+
+    .cta-blue    { color: #60a5fa; }
+    .cta-teal    { color: #2dd4bf; }
+    .cta-emerald { color: #34d399; }
+    .cta-amber   { color: #fbbf24; }
+    .cta-violet  { color: #a78bfa; }
+
+    .cta-soon {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 12px;
+        font-weight: 600;
+        color: rgba(255,255,255,0.3);
+    }
+
+    /* Row separator */
+    .row-gap { margin-bottom: 14px; }
+</style>
+
+<button id="logoutBtn" onclick="logout()" class="fixed top-4 right-4 z-50">
+    <i class="fas fa-sign-out-alt"></i>
+    <span>Güvenli Çıkış</span>
+</button>
+
+<div class="index-main h-[calc(100dvh-2rem)] flex items-center justify-center" x-data="">
+    <div class="app-wrapper max-w-5xl w-full">
+
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <img src="/static/images/logo2.png" alt="Logo" class="w-80 h-90 mx-auto mb-3 object-contain">
+            <p class="app-subtitle">KDV iade süreçleriniz için profesyonel otomasyon çözümü</p>
+        </div>
+
+        <!-- Row 1 -->
+        <div class="grid md:grid-cols-3 gap-4 row-gap">
+
+            <!-- İndirilecek KDV -->
+            <a href="/indirilecek-kdv" class="menu-card card-blue">
+                <div class="card-glass">
+                    <div class="icon-box icon-blue"><i class="fas fa-download"></i></div>
+                    <h2 class="card-title">İndirilecek KDV Listesi Oluştur</h2>
+                    <p class="card-desc">XML dosyalarınızı yükleyerek indirilecek KDV listelerini otomatik olarak oluşturun.</p>
+                    <div class="card-cta cta-blue">
+                        <span>Başla</span><i class="fas fa-arrow-right text-xs"></i>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Yüklenilen KDV -->
+            <a href="/yuklenen-kdv?select=1" class="menu-card card-teal">
+                <div class="card-glass">
+                    <div class="icon-box icon-teal"><i class="fas fa-upload"></i></div>
+                    <h2 class="card-title">Yüklenilen KDV Listesi Oluştur</h2>
+                    <p class="card-desc">Stok KDV tutarlarınızı ortaya çıkarıp yüklenilen KDV listesi oluşturun.</p>
+                    <div class="card-cta cta-teal">
+                        <span>Başla</span><i class="fas fa-arrow-right text-xs"></i>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Satış Faturaları (Pasif) -->
+            <div class="menu-card card-disabled">
+                <div class="card-glass">
+                    <div class="icon-box icon-gray"><i class="fas fa-file-invoice-dollar"></i></div>
+                    <h2 class="card-title" style="color:rgba(255,255,255,0.35);">Satış Faturaları Listesi Oluştur</h2>
+                    <p class="card-desc">XML dosyalarınızı yükleyerek Satış Faturaları Listesi oluşturun.</p>
+                    <div class="cta-soon">
+                        <i class="fas fa-clock text-xs"></i><span>Yakında</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Row 2 -->
+        <div class="grid md:grid-cols-3 gap-4">
+
+            <!-- Mükellef İşlemleri -->
+            <a href="/mukellef-islemleri" class="menu-card card-emerald">
+                <div class="card-glass">
+                    <div class="icon-box icon-emerald"><i class="fas fa-users"></i></div>
+                    <h2 class="card-title">Mükellef İşlemleri</h2>
+                    <p class="card-desc">Mükellef ekleme ve silme işlemleri için yönetim paneli.</p>
+                    <div class="card-cta cta-emerald">
+                        <span>Yönet</span><i class="fas fa-arrow-right text-xs"></i>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Hata/Öneri Bildir -->
+            <a href="/feedback" class="menu-card card-amber">
+                <div class="card-glass">
+                    <div class="icon-box icon-amber"><i class="fas fa-comment-dots"></i></div>
+                    <h2 class="card-title">Hata/Öneri Bildir</h2>
+                    <p class="card-desc">Karşılaştığınız hataları veya önerilerinizi lütfen bizlere bildirin.</p>
+                    <div class="card-cta cta-amber">
+                        <span>Bildir</span><i class="fas fa-arrow-right text-xs"></i>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Kullanıcı İşlemleri -->
+            <a href="/dashboard" class="menu-card card-violet">
+                <div class="card-glass">
+                    <div class="icon-box icon-violet"><i class="fas fa-user-cog"></i></div>
+                    <h2 class="card-title">Kullanıcı İşlemleri</h2>
+                    <p class="card-desc">Şifre değiştirme, lisans bilgileri ve cihaz yönetimi işlemleri.</p>
+                    <div class="card-cta cta-violet">
+                        <span>Gir</span><i class="fas fa-arrow-right text-xs"></i>
+                    </div>
+                </div>
+            </a>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block footer %}{% endblock %}

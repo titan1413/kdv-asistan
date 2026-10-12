@@ -1,0 +1,133 @@
+**3065 ASİSTAN KİŞİSEL VERİLERİN KORUNMASI VE İŞLENMESİ AYDINLATMA METNİ**
+
+---
+
+### **1. VERİ SORUMLUSUNUN KİMLİĞİ**
+
+6698 sayılı Kişisel Verilerin Korunması Kanunu (“KVKK”) uyarınca, veri sorumlusu sıfatıyla hareket eden gerçek kişi; Gaziantep adresinde mukim **Mehmet Önder (3065.com.tr)** olup, işbu aydınlatma metni kapsamında kişisel verileriniz, aşağıda detaylı olarak açıklanan kapsam, amaç ve hukuki sebepler çerçevesinde işlenmektedir.
+
+Veri sorumlusu ile iletişime geçmek isteyen kullanıcılar, [info@3065.com.tr](mailto:info@3065.com.tr) adresi üzerinden başvuru gerçekleştirebilir.
+
+---
+
+### **2. İŞLENEN KİŞİSEL VERİLER, VERİ KATEGORİLERİ VE TOPLAMA YÖNTEMİ**
+
+Kişisel verileriniz; web sitesi, yazılım aktivasyonu, lisans doğrulama sistemleri ve ilgili dijital platformlar üzerinden tamamen veya kısmen otomatik yöntemlerle, elektronik ortamda toplanmakta ve işlenmektedir.
+
+Bu kapsamda işlenen kişisel veri kategorileri aşağıda belirtilmiştir:
+
+* **Kimlik Bilgileri:** Ad, soyad, varsa T.C. kimlik numarası, vergi kimlik numarası
+* **İletişim Bilgileri:** E-posta adresi, telefon numarası, fatura adresi ve iletişim için kullanılan diğer bilgiler
+* **Müşteri İşlem Bilgileri:** Satın alınan lisans türü, lisans süresi, ödeme bilgileri, fatura kayıtları, işlem geçmişi
+* **Teknik ve İşlem Güvenliği Verileri:** IP adresi, cihaz bilgileri, Hardware ID (cihaz parmak izi), kullanım logları, oturum kayıtları
+
+Toplanan veriler, kullanıcının açık şekilde sağladığı bilgiler ve sistemsel olarak elde edilen teknik verilerden oluşmaktadır.
+
+---
+
+### **3. KİŞİSEL VERİLERİN İŞLENME AMAÇLARI**
+
+Toplanan kişisel verileriniz;
+
+* Yazılım lisansının oluşturulması, doğrulanması ve sürdürülebilir şekilde çalışmasının sağlanması
+* Kullanıcı hesaplarının oluşturulması ve yönetilmesi
+* Teknik destek hizmetlerinin sağlanması ve kullanıcı taleplerinin karşılanması
+* Satış işlemlerinin gerçekleştirilmesi, faturalandırma ve muhasebe süreçlerinin yürütülmesi
+* Yazılım güncellemeleri, bakım çalışmaları ve teknik bilgilendirmelerin yapılması
+* Sistem güvenliğinin sağlanması, yetkisiz erişimlerin önlenmesi ve denetlenmesi
+* İlgili mevzuat kapsamında saklama, raporlama ve denetim yükümlülüklerinin yerine getirilmesi
+
+amaçlarıyla sınırlı olarak işlenmektedir.
+
+---
+
+### **4. HUKUKİ SEBEPLER (KVKK MADDE 5 VE 6)**
+
+Kişisel verileriniz, KVKK’nın 5. ve 6. maddelerinde belirtilen aşağıdaki hukuki sebeplere dayanılarak işlenmektedir:
+
+* Bir sözleşmenin kurulması veya ifasıyla doğrudan doğruya ilgili olması
+* Veri sorumlusunun hukuki yükümlülüğünü yerine getirebilmesi için zorunlu olması
+* Bir hakkın tesisi, kullanılması veya korunması için veri işlemenin zorunlu olması
+* İlgili kişinin temel hak ve özgürlüklerine zarar vermemek kaydıyla veri sorumlusunun meşru menfaatleri kapsamında veri işlenmesinin zorunlu olması
+
+Bu kapsamda veri işleme faaliyetleri, açık rıza gerektirmeksizin kanuni dayanaklara uygun şekilde yürütülmektedir.
+
+---
+
+### **5. MÜKELLEF VERİLERİNİN GİZLİLİĞİ VE YEREL İŞLEME PRENSİBİ**
+
+3065 Asistan yazılımı, kullanıcı tarafından sisteme yüklenen mükellef verileri (indirilecek KDV listeleri, yüklenilen KDV listeleri ve benzeri finansal içerikler) bakımından “local-first” prensibi ile çalışmaktadır.
+
+Bu kapsamda:
+
+* İlgili veriler hiçbir şekilde bulut ortamına aktarılmaz
+* Hizmet Sağlayıcı tarafından uzaktan erişim sağlanmaz
+* Veriler yalnızca kullanıcının kendi cihazında işlenir
+
+Bu nedenle, söz konusu veriler üzerinde Hizmet Sağlayıcı’nın herhangi bir kontrol, erişim veya müdahale yetkisi bulunmamaktadır.
+
+---
+
+### **6. KİŞİSEL VERİLERİN AKTARILMASI VE PAYLAŞIMI**
+
+Kişisel verileriniz;
+
+* Yetkili kamu kurum ve kuruluşlarına (mahkemeler, vergi idaresi vb.)
+* Ödeme hizmetlerinin sağlanabilmesi amacıyla aracı ödeme kuruluşlarına
+
+ilgili mevzuat çerçevesinde ve zorunluluklar dahilinde aktarılabilir.
+
+Bunun dışında kişisel verileriniz;
+
+* Üçüncü şahıslara pazarlama amacıyla satılmaz
+* Reklam platformları ile paylaşılmaz
+* Ticari veri havuzlarına aktarılmaz
+
+---
+
+### **7. VERİ SAHİBİNİN HAKLARI**
+
+KVKK’nın 11. maddesi kapsamında veri sahibi olarak aşağıdaki haklara sahipsiniz:
+
+* Kişisel verilerinizin işlenip işlenmediğini öğrenme
+* İşlenmişse buna ilişkin bilgi talep etme
+* İşleme amacını ve amacına uygun kullanılıp kullanılmadığını öğrenme
+* Yurt içinde veya yurt dışında aktarıldığı üçüncü kişileri bilme
+* Eksik veya yanlış işlenmiş verilerin düzeltilmesini isteme
+* Kişisel verilerin silinmesini veya yok edilmesini talep etme
+* İşlemenin hukuka aykırı olması halinde zararın giderilmesini talep etme
+
+Başvurularınızı [info@3065.com.tr](mailto:info@3065.com.tr) adresine yazılı olarak iletebilirsiniz.
+
+---
+
+### **8. VERİ GÜVENLİĞİ, SAKLAMA SÜRESİ VE KORUMA TEDBİRLERİ**
+
+Kişisel verileriniz;
+
+* İşbu sözleşme ilişkisi devam ettiği sürece
+* Sözleşme sona erdikten sonra ise ilgili mevzuatta öngörülen süreler boyunca
+
+saklanmaktadır.
+
+Bu kapsamda, Türk Ticaret Kanunu ve ilgili mevzuat gereği verileriniz 10 yıl süre ile muhafaza edilebilir.
+
+Veri güvenliğinin sağlanması amacıyla:
+
+* Teknik güvenlik önlemleri
+* Şifreleme yöntemleri
+* Yetki kontrol sistemleri
+
+uygulanmaktadır.
+
+---
+
+### **9. ZORUNLU VE İSTEĞE BAĞLI VERİLER**
+
+Bazı kişisel verilerin sağlanması, hizmetin sunulabilmesi için zorunludur. Bu verilerin eksik veya hatalı sağlanması halinde, yazılım hizmetlerinden tam veya kısmi olarak yararlanılamayabilir.
+
+---
+
+### **10. YÜRÜRLÜK VE KABUL**
+
+Kullanıcı, web sitesi üzerinden üyelik oluşturması, yazılımı indirmesi, kurması veya lisans satın alması ile birlikte işbu aydınlatma metnini okuduğunu, anladığını ve KVKK kapsamında bilgilendirildiğini kabul eder.

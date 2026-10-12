@@ -1,0 +1,993 @@
+<script>
+function iadeHesaplaApp() {
+    return {
+        stokTutari: '0,00',
+        yontem: 'FIFO',
+        sonucVerileri: [],
+        toplamYuklenim: 0,
+        isCalculating: false,
+        isApproving: false,
+        approveResult: null,
+        progressMessage: 'Hesaplanıyor...',
+        progressDetail: 'Veriler işleniyor',
+        progressPercent: 0,
+        sessionId: '',
+        gibKalemDownloads: 1,
+        gibFaturaDownloads: 1,
+        standartDownloads: 1,
+        currentPage: 1,
+        itemsPerPage: 50,
+        showExportModal: false,
+        showApproveModal: false,
+        selectedExportMode: 'kalem',
+        filterSIRA: '',
+        filterTARIH: '',
+        filterSERI: '',
+        filterNO: '',
+        filterUNVAN: '',
+        filterVKN: '',
+        filterCINS: '',
+        filterMIKTAR: '',
+        filterMATRAH: '',
+        filterKDV: '',
+        filterYUKLENILEN: '',
+        filterIND_DONEM: '',
+        filterYUK_DONEM: '',
+        filterURUN_KODU: '',
+        selectedItems: new Set(),
+        deleting: false,
+
+        initApp() {
+            this.sessionId = 'session_' + Date.now();
+            this.loadSavedData();
+        },
+
+        formatStokTutari() {
+            let val = this.stokTutari.replace(/\./g, '').replace(',', '.');
+            let num = parseFloat(val) || 0;
+            this.stokTutari = num.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        },
+
+        formatTL(sayi) {
+            return parseFloat(sayi).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
+        },
+
+        formatNumber(sayi) {
+            return parseFloat(sayi).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        },
+
+        async hesaplamayiTetikle() {
+            console.log('[DEBUG] hesaplamayiTetikle called');
+            if (this.isCalculating) return;
+            
+            // Ön kontrol: Gerekli verilerin varlığını kontrol et
+            const imalatSessionId = localStorage.getItem('imalat_session_id') || '';
+            const karsilastirmaSessionId = window.yuklenenApp?.tabDataStores?.hazir?.sessionId || '';
+            const yuklenilenSessionId = window.yuklenenApp?.tabDataStores?.yuklenilen?.sessionId || '';
+            const indSessionId = window.yuklenenApp?.tabDataStores?.indirilecek?.sessionId || '';
+
+            if (!imalatSessionId) {
+                alert('İmalat verisi bulunamadı. Önce İmalat Tablosu\'nu doldurun.');
+                return;
+            }
+
+            if (!karsilastirmaSessionId) {
+                alert('Karşılaştırma sonucu bulunamadı. Önce karşılaştırma yapın.');
+                return;
+            }
+            
+            console.log('[DEBUG] Starting calculation');
+            this.isCalculating = true;
+            this.progressPercent = 0;
+            this.progressMessage = 'Veriler doğrulanıyor...';
+            this.progressDetail = 'Hesaplama motoru başlatılıyor';
+            
+            // Reset all download limits on new calculation
+            this.gibKalemDownloads = 1;
+            this.gibFaturaDownloads = 1;
+            this.standartDownloads = 1;
+
+            try {
+                this.simulateProgress();
+                
+                console.log('[DEBUG] Sending request to /iade-hesapla/calculate');
+                console.log('[DEBUG] Request body:', JSON.stringify({
+                    session_id: this.sessionId,
+                    stok_tutari: this.stokTutari,
+                    yontem: this.yontem
+                }));
+                
+                const _calcHeaders = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('session_token') || ''}` };
+                const _mukId = localStorage.getItem('active_mukellef_id') || '';
+                const _calcDId = localStorage.getItem('active_donem_id') || '';
+                if (_mukId) _calcHeaders['X-Mukellef-Id'] = _mukId;
+                if (_calcDId) _calcHeaders['X-Donem-Id'] = _calcDId;
+                const response = await fetch('/iade-hesapla/calculate', {
+                    method: 'POST',
+                    headers: _calcHeaders,
+                    body: JSON.stringify({
+                        session_id: this.sessionId,
+                        stok_tutari: this.stokTutari,
+                        yontem: this.yontem,
+                        imalat_session_id: localStorage.getItem('imalat_session_id') || '',
+                        karsilastirma_session_id: window.yuklenenApp?.tabDataStores?.hazir?.sessionId || '',
+                        yuklenilen_session_id: window.yuklenenApp?.tabDataStores?.yuklenilen?.sessionId || '',
+                        ind_session_id: window.yuklenenApp?.tabDataStores?.indirilecek?.sessionId || ''
+                    })
+                });
+
+                console.log('[DEBUG] Response received:', response.status);
+                const result = await response.json();
+                console.log('[DEBUG] Response data:', result);
+                
+                if (result.success) {
+                    this.sonucVerileri = result.sonuc_verileri || [];
+                    this.toplamYuklenim = result.toplam_yuklenim || 0;
+
+                    // Eğer hiçbir şey yüklenmeyecekse uyarı ver
+                    if (this.toplamYuklenim === 0 && this.sonucVerileri.length === 0) {
+                        alert('Hesaplama tamamlandı ancak yüklenecek KDV bulunamadı.\n\nOlası sebepler:\n- Stok tutarı yetersiz\n- Karşılaştırma tablosunda kalan KDV yok\n- İmalat tablosundaki ürünlerden yüklenecek bir şey kalmamış');
+                        this.sonucVerileri = [];
+                        this.toplamYuklenim = 0;
+                    }
+
+                    if (result.uyari_metni) {
+                        console.warn('Uyarılar:', result.uyari_metni);
+                    }
+                } else {
+                    alert('Hata:\n\n' + result.error);
+                    this.sonucVerileri = [];
+                    this.toplamYuklenim = 0;
+                }
+            } catch (error) {
+                console.error('Hesaplama hatası:', error);
+                alert('Hesaplama sırasında bir hata oluştu: ' + error.message);
+            } finally {
+                this.isCalculating = false;
+                this.progressPercent = 100;
+            }
+        },
+
+        simulateProgress() {
+            const steps = [
+                { percent: 10, message: 'Veriler doğrulanıyor...', detail: 'Fatura verileri okunuyor' },
+                { percent: 30, message: 'Hesaplama motoru çalışıyor...', detail: 'İmalat tablosu işleniyor' },
+                { percent: 50, message: 'Hesaplama devam ediyor...', detail: 'Yüklenimler hesaplanıyor' },
+                { percent: 70, message: 'Sonuçlar hazırlanıyor...', detail: 'Satırlar biçimlendiriliyor' },
+                { percent: 90, message: 'Neredeyse bitti...', detail: 'Son düzenlemeler yapılıyor' }
+            ];
+
+            let stepIndex = 0;
+            const interval = setInterval(() => {
+                if (stepIndex < steps.length && this.isCalculating) {
+                    this.progressPercent = steps[stepIndex].percent;
+                    this.progressMessage = steps[stepIndex].message;
+                    this.progressDetail = steps[stepIndex].detail;
+                    stepIndex++;
+                } else {
+                    clearInterval(interval);
+                }
+            }, 500);
+        },
+
+        selectExportMode(mode) {
+            this.selectedExportMode = mode;
+            this.showExportModal = false;
+            
+            // Now proceed with export
+            this.proceedWithGibExport();
+        },
+
+        async proceedWithGibExport() {
+            // Check download limit based on selected mode
+            if (this.selectedExportMode === 'kalem') {
+                if (this.gibKalemDownloads <= 0) {
+                    alert('GİB Kalem Excel indirme hakkınız kalmadı. Yeni bir hesaplama yaparak hakkınızı yenileyebilirsiniz.');
+                    return;
+                }
+                this.gibKalemDownloads--;
+            } else if (this.selectedExportMode === 'fatura') {
+                if (this.gibFaturaDownloads <= 0) {
+                    alert('GİB Fatura Excel indirme hakkınız kalmadı. Yeni bir hesaplama yaparak hakkınızı yenileyebilirsiniz.');
+                    return;
+                }
+                this.gibFaturaDownloads--;
+            }
+            
+            // Download via fetch so we can include Authorization header
+            const _gibToken = localStorage.getItem('session_token') || '';
+            const _gibMukId = localStorage.getItem('active_mukellef_id') || '';
+            const _gibDId = localStorage.getItem('active_donem_id') || '';
+            const _gibHeaders = { 'Authorization': `Bearer ${_gibToken}` };
+            if (_gibMukId) _gibHeaders['X-Mukellef-Id'] = _gibMukId;
+            if (_gibDId) _gibHeaders['X-Donem-Id'] = _gibDId;
+            const _gibResp = await fetch(`/iade-hesapla/export-gib-excel?mod=${this.selectedExportMode}`, {
+                headers: _gibHeaders
+            });
+            if (_gibResp.ok) {
+                const _gibBlob = await _gibResp.blob();
+                const _gibUrl = window.URL.createObjectURL(_gibBlob);
+                const _gibA = document.createElement('a');
+                _gibA.href = _gibUrl;
+                _gibA.download = 'iade_gib_listesi.xlsx';
+                document.body.appendChild(_gibA); _gibA.click();
+                window.URL.revokeObjectURL(_gibUrl);
+                document.body.removeChild(_gibA);
+            } else {
+                try {
+                    const _gibErr = await _gibResp.json();
+                    alert(_gibErr.error || 'GİB Excel indirilemedi.');
+                } catch { alert('GİB Excel indirilemedi.'); }
+            }
+        },
+
+        async gibExcelAktar() {
+            // Check if both GIB download limits are exhausted
+            if (this.gibKalemDownloads <= 0 && this.gibFaturaDownloads <= 0) {
+                alert('GİB Excel indirme hakkınız kalmadı. Yeni bir hesaplama yaparak hakkınızı yenileyebilirsiniz.');
+                return;
+            }
+
+            // Show export mode selection modal
+            this.showExportModal = true;
+        },
+
+        async standartExcelAktar() {
+            if (this.standartDownloads <= 0) {
+                alert('Standart Excel indirme hakkınız kalmadı. Yeni bir hesaplama yaparak hakkınızı yenileyebilirsiniz.');
+                return;
+            }
+
+            // Decrement download limit
+            this.standartDownloads--;
+            
+            // Download via fetch so we can include Authorization header
+            const _stToken = localStorage.getItem('session_token') || '';
+            const _stMukId = localStorage.getItem('active_mukellef_id') || '';
+            const _stDId = localStorage.getItem('active_donem_id') || '';
+            const _stHeaders = { 'Authorization': `Bearer ${_stToken}` };
+            if (_stMukId) _stHeaders['X-Mukellef-Id'] = _stMukId;
+            if (_stDId) _stHeaders['X-Donem-Id'] = _stDId;
+            const _stResp = await fetch('/iade-hesapla/export-standart-excel', {
+                headers: _stHeaders
+            });
+            if (_stResp.ok) {
+                const _stBlob = await _stResp.blob();
+                const _stUrl = window.URL.createObjectURL(_stBlob);
+                const _stA = document.createElement('a');
+                _stA.href = _stUrl;
+                _stA.download = 'iade_standart_listesi.xlsx';
+                document.body.appendChild(_stA); _stA.click();
+                window.URL.revokeObjectURL(_stUrl);
+                document.body.removeChild(_stA);
+            } else {
+                try {
+                    const _stErr = await _stResp.json();
+                    alert(_stErr.error || 'Standart Excel indirilemedi.');
+                } catch { alert('Standart Excel indirilemedi.'); }
+            }
+        },
+
+        async saveData() {
+            try {
+                const _sToken = localStorage.getItem('session_token') || '';
+                const _sMukId = localStorage.getItem('active_mukellef_id') || '';
+                const _sDId = localStorage.getItem('active_donem_id') || '';
+                const _sHeaders = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_sToken}` };
+                if (_sMukId) _sHeaders['X-Mukellef-Id'] = _sMukId;
+                if (_sDId) _sHeaders['X-Donem-Id'] = _sDId;
+                await fetch('/iade-hesapla/save-data', {
+                    method: 'POST',
+                    headers: _sHeaders,
+                    body: JSON.stringify({
+                        stok_tutari: this.stokTutari,
+                        yontem: this.yontem,
+                        sonuc_verileri: this.sonucVerileri,
+                        toplam_yuklenim: this.toplamYuklenim
+                    })
+                });
+            } catch (error) {
+                console.error('Veri kaydetme hatası:', error);
+            }
+        },
+
+        async loadSavedData() {
+            try {
+                const _lToken = localStorage.getItem('session_token') || '';
+                const _lMukId = localStorage.getItem('active_mukellef_id') || '';
+                const _lDId = localStorage.getItem('active_donem_id') || '';
+                const _lHeaders = { 'Authorization': `Bearer ${_lToken}` };
+                if (_lMukId) _lHeaders['X-Mukellef-Id'] = _lMukId;
+                if (_lDId) _lHeaders['X-Donem-Id'] = _lDId;
+                const response = await fetch('/iade-hesapla/get-data', {
+                    headers: _lHeaders
+                });
+                const data = await response.json();
+                
+                if (data.stok_tutari) {
+                    this.stokTutari = data.stok_tutari;
+                    this.yontem = data.yontem || 'FIFO';
+                    this.sonucVerileri = data.sonuc_verileri || [];
+                    // Gelen verilerden toplam yüklenimi hesapla
+                    if (data.sonuc_verileri && data.sonuc_verileri.length > 0) {
+                        this.toplamYuklenim = data.sonuc_verileri.reduce((sum, row) => {
+                            const yuklenim = parseFloat(row[10]) || 0; // index 10 = YUKLENIM
+                            return sum + yuklenim;
+                        }, 0);
+                    }
+                    this.gibKalemDownloads = data.gib_kalem_downloads !== undefined ? data.gib_kalem_downloads : 1;
+                    this.gibFaturaDownloads = data.gib_fatura_downloads !== undefined ? data.gib_fatura_downloads : 1;
+                    this.standartDownloads = data.standart_downloads !== undefined ? data.standart_downloads : 1;
+                }
+            } catch (error) {
+                console.error('Veri yükleme hatası:', error);
+            }
+        },
+
+        openApproveModal() {
+            const mukId = localStorage.getItem('active_mukellef_id') || '';
+            if (!mukId) {
+                alert('Mükellef seçilmemiş. Lütfen önce bir mükellef seçin.');
+                return;
+            }
+            if (!this.sonucVerileri || this.sonucVerileri.length === 0) {
+                alert('Onaylanacak hesaplama sonucu yok. Lütfen önce hesaplama yapın.');
+                return;
+            }
+            this.showApproveModal = true;
+        },
+
+        async approveYuklenilen() {
+            this.showApproveModal = false;
+            const mukId = localStorage.getItem('active_mukellef_id') || '';
+            const donemId = localStorage.getItem('active_donem_id') || '';
+            if (!mukId) {
+                alert('Mükellef seçilmemiş. Lütfen önce bir mükellef seçin.');
+                return;
+            }
+            if (!this.sonucVerileri || this.sonucVerileri.length === 0) {
+                alert('Onaylanacak hesaplama sonucu yok. Lütfen önce hesaplama yapın.');
+                return;
+            }
+            this.isApproving = true;
+            this.approveResult = null;
+            try {
+                const token = localStorage.getItem('session_token') || '';
+                const headers = { 'Authorization': `Bearer ${token}` };
+                if (mukId) headers['X-Mukellef-Id'] = mukId;
+                if (donemId) headers['X-Donem-Id'] = donemId;
+                await this.saveData();
+                const r = await fetch('/iade-hesapla/approve-yuklenilen', { method: 'POST', headers });
+                const d = await r.json();
+                if (d.success) {
+                    this.approveResult = { success: true, message: `${d.added_count} kayıt Yüklenilen KDV listesine eklendi. Toplam: ${d.total_count} kayıt.` };
+                } else {
+                    this.approveResult = { success: false, message: d.error || 'Bilinmeyen hata' };
+                }
+            } catch (e) {
+                this.approveResult = { success: false, message: 'Bağlantı hatası: ' + e.message };
+            }
+        },
+
+        closeApproveResult() {
+            this.isApproving = false;
+            this.approveResult = null;
+        },
+
+        get hasFilters() {
+            return !!(this.filterSIRA || this.filterTARIH || this.filterSERI || this.filterNO ||
+                      this.filterUNVAN || this.filterVKN || this.filterCINS || this.filterMIKTAR ||
+                      this.filterMATRAH || this.filterKDV || this.filterYUKLENILEN ||
+                      this.filterIND_DONEM || this.filterYUK_DONEM || this.filterURUN_KODU);
+        },
+
+        get filteredData() {
+            return (this.sonucVerileri || []).filter(row => (
+                (!this.filterSIRA       || String(row[0]  || '').toLowerCase().includes(this.filterSIRA.toLowerCase())) &&
+                (!this.filterTARIH      || String(row[1]  || '').toLowerCase().includes(this.filterTARIH.toLowerCase())) &&
+                (!this.filterSERI       || String(row[2]  || '').toLowerCase().includes(this.filterSERI.toLowerCase())) &&
+                (!this.filterNO         || String(row[3]  || '').toLowerCase().includes(this.filterNO.toLowerCase())) &&
+                (!this.filterUNVAN      || String(row[4]  || '').toLowerCase().includes(this.filterUNVAN.toLowerCase())) &&
+                (!this.filterVKN        || String(row[5]  || '').toLowerCase().includes(this.filterVKN.toLowerCase())) &&
+                (!this.filterCINS       || String(row[6]  || '').toLowerCase().includes(this.filterCINS.toLowerCase())) &&
+                (!this.filterMIKTAR     || String(row[7]  || '').includes(this.filterMIKTAR)) &&
+                (!this.filterMATRAH     || String(row[8]  || '').includes(this.filterMATRAH)) &&
+                (!this.filterKDV        || String(row[9]  || '').includes(this.filterKDV)) &&
+                (!this.filterYUKLENILEN || String(row[10] || '').includes(this.filterYUKLENILEN)) &&
+                (!this.filterIND_DONEM  || String(row[11] || '').toLowerCase().includes(this.filterIND_DONEM.toLowerCase())) &&
+                (!this.filterYUK_DONEM  || String(row[12] || '').toLowerCase().includes(this.filterYUK_DONEM.toLowerCase())) &&
+                (!this.filterURUN_KODU  || String(row[13] || '').toLowerCase().includes(this.filterURUN_KODU.toLowerCase()))
+            ));
+        },
+
+        clearFilters() {
+            this.filterSIRA = '';
+            this.filterTARIH = '';
+            this.filterSERI = '';
+            this.filterNO = '';
+            this.filterUNVAN = '';
+            this.filterVKN = '';
+            this.filterCINS = '';
+            this.filterMIKTAR = '';
+            this.filterMATRAH = '';
+            this.filterKDV = '';
+            this.filterYUKLENILEN = '';
+            this.filterIND_DONEM = '';
+            this.filterYUK_DONEM = '';
+            this.filterURUN_KODU = '';
+            this.currentPage = 1;
+        },
+
+        get totalPages() {
+            return Math.ceil(this.filteredData.length / this.itemsPerPage);
+        },
+
+        get paginatedData() {
+            const data = this.filteredData;
+            const start = (this.currentPage - 1) * this.itemsPerPage;
+            return data.slice(start, start + this.itemsPerPage);
+        },
+
+        get currentPageInfo() {
+            const filtered = this.filteredData;
+            const total = filtered.length;
+            if (total === 0) return { start: 0, end: 0, count: 0, total: 0, totalAll: (this.sonucVerileri || []).length };
+            const start = (this.currentPage - 1) * this.itemsPerPage + 1;
+            const end = Math.min(this.currentPage * this.itemsPerPage, total);
+            const count = end - start + 1;
+            return { start, end, count, total, totalAll: (this.sonucVerileri || []).length };
+        },
+
+        get pageNumbers() {
+            const pages = [];
+            const maxVisible = 5;
+            let start = Math.max(1, this.currentPage - Math.floor(maxVisible / 2));
+            let end = Math.min(this.totalPages, start + maxVisible - 1);
+            
+            if (end - start + 1 < maxVisible) {
+                start = Math.max(1, end - maxVisible + 1);
+            }
+            
+            for (let i = start; i <= end; i++) {
+                pages.push(i);
+            }
+            return pages;
+        },
+
+        goToPage(page) {
+            if (page >= 1 && page <= this.totalPages) {
+                this.currentPage = page;
+            }
+        },
+
+        previousPage() {
+            if (this.currentPage > 1) {
+                this.currentPage--;
+            }
+        },
+
+        nextPage() {
+            if (this.currentPage < this.totalPages) {
+                this.currentPage++;
+            }
+        },
+
+        truncateText(text, maxLength = 30) {
+            if (!text) return '';
+            if (text.length <= maxLength) return text;
+            return text.substring(0, maxLength) + '...';
+        },
+
+        get selectedCount() {
+            return this.selectedItems.size;
+        },
+
+        get allFilteredSelected() {
+            if (this.filteredData.length === 0) return false;
+            return this.filteredData.every(row => this.isItemSelected(row));
+        },
+
+        getItemKey(item) {
+            // Use a combination of unique fields to create a stable key
+            return JSON.stringify(item);
+        },
+
+        isItemSelected(item) {
+            return this.selectedItems.has(this.getItemKey(item));
+        },
+
+        toggleItemSelection(item) {
+            const key = this.getItemKey(item);
+            if (this.selectedItems.has(key)) {
+                this.selectedItems.delete(key);
+            } else {
+                this.selectedItems.add(key);
+            }
+        },
+
+        selectAllFiltered() {
+            this.filteredData.forEach(row => {
+                this.selectedItems.add(this.getItemKey(row));
+            });
+        },
+
+        deselectAll() {
+            this.selectedItems.clear();
+        },
+
+        toggleSelectAll() {
+            if (this.allFilteredSelected) {
+                this.deselectAll();
+            } else {
+                this.selectAllFiltered();
+            }
+        },
+
+        deleteSelected() {
+            if (this.selectedCount === 0) return;
+            if (!confirm(`${this.selectedCount} kaydı silmek istediğinizden emin misiniz?`)) return;
+
+            this.deleting = true;
+            try {
+                // Filter out selected items from sonucVerileri
+                this.sonucVerileri = this.sonucVerileri.filter(row => !this.isItemSelected(row));
+                this.selectedItems.clear();
+                this.currentPage = 1;
+                // Auto-save after deletion
+                this.saveData();
+            } finally {
+                this.deleting = false;
+            }
+        }
+    }
+}
+</script>
+
+<div x-data="iadeHesaplaApp()" x-init="initApp()" class="w-full space-y-6">
+    <!-- Control Panel -->
+    <div class="glass-panel shadow-lg p-4">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <!-- Left Side: Settings -->
+            <div class="flex flex-wrap items-center gap-4">
+                <!-- Stok Tutarı Input -->
+                <div class="flex items-center gap-3">
+                    <label class="text-sm font-bold text-white/90">Bir Önceki Yıl Stok Tutarı (TL):</label>
+                    <input 
+                        type="text" 
+                        x-model="stokTutari" 
+                        @blur="formatStokTutari()"
+                        @keyup.enter="formatStokTutari(); hesaplamayiTetikle()"
+                        class="w-auto min-w-[120px] px-3 py-2 border-2 border-white/15 rounded-lg bg-white/10 text-white/90 text-sm font-medium focus:ring-2 focus:ring-white/20 focus:border-white/20"
+                        placeholder="0,00"
+                    >
+                </div>
+
+                <!-- Yöntem Selection -->
+                <div class="flex items-center gap-4">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input 
+                            type="radio" 
+                            x-model="yontem" 
+                            value="FIFO" 
+                            class="w-4 h-4 text-teal-600 border-white/15 focus:ring-teal-500"
+                        >
+                        <span class="text-sm font-bold text-white/90">FIFO</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input 
+                            type="radio" 
+                            x-model="yontem" 
+                            value="Maliyet" 
+                            class="w-4 h-4 text-teal-600 border-white/15 focus:ring-teal-500"
+                        >
+                        <span class="text-sm font-bold text-white/90">Maliyet</span>
+                    </label>
+                </div>
+
+                <!-- Listeyi Oluştur Button (Center) -->
+                <button 
+                    @click="hesaplamayiTetikle()"
+                    :disabled="isCalculating"
+                    class="px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-white/10 disabled:text-white/30 text-white rounded-lg font-bold transition-colors flex items-center text-sm border-2 border-teal-500"
+                >
+                    <i class="fas fa-rocket mr-2"></i>
+                    <span x-show="!isCalculating">Listeyi Oluştur</span>
+                    <span x-show="isCalculating">Hesaplanıyor...</span>
+                </button>
+            </div>
+
+            <!-- Right Side: Total Display and Excel Buttons -->
+            <div class="flex items-center gap-4">
+                <!-- Total Display -->
+                <div class="glass-panel rounded-lg px-4 py-2">
+                    <div class="text-xs font-bold text-white/60 mb-1">TOPLAM YÜKLENİM</div>
+                    <div class="text-lg font-bold text-white/90" x-text="formatTL(toplamYuklenim)"></div>
+                </div>
+
+                <!-- Excel Buttons (Right Aligned) -->
+                <div class="flex flex-col items-end gap-2">
+                    <!-- Üst Satır: İndirme Durumu + Onayla Butonu -->
+                    <div class="flex items-start gap-3">
+                        <!-- Download Status -->
+                        <div class="text-xs text-white/60 font-medium space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-white/40">GİB Kalem:</span>
+                                <span :class="gibKalemDownloads > 0 ? 'text-green-400 font-bold' : 'text-red-400 font-bold'" x-text="gibKalemDownloads + '/1'"></span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-white/40">GİB Fatura:</span>
+                                <span :class="gibFaturaDownloads > 0 ? 'text-green-400 font-bold' : 'text-red-400 font-bold'" x-text="gibFaturaDownloads + '/1'"></span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-white/40">Standart:</span>
+                                <span :class="standartDownloads > 0 ? 'text-green-400 font-bold' : 'text-red-400 font-bold'" x-text="standartDownloads + '/1'"></span>
+                            </div>
+                            <div class="text-[10px] text-white/30 italic mt-1">Her yeni hesaplamada excel dosyalarını 1 defa indirebilirsiniz.</div>
+                        </div>
+                        <!-- Listeyi ONAYLA Butonu -->
+                        <button 
+                            @click="openApproveModal()"
+                            :disabled="sonucVerileri.length === 0"
+                            class="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-white/10 disabled:text-white/30 text-white rounded-lg font-bold transition-all duration-200 text-sm flex items-center gap-2 shadow-md hover:shadow-lg hover:-translate-y-0.5 hover:scale-105 whitespace-nowrap border-2 border-indigo-500"
+                            title="Hesaplama sonuçlarını Yüklenilen KDV listesine ekle"
+                        >
+                            <i class="fas fa-save text-base"></i>
+                            Listeyi ONAYLA
+                        </button>
+                    </div>
+                    
+                    <!-- Excel Buttons -->
+                    <div class="flex items-center gap-2">
+                        <button 
+                            @click="gibExcelAktar()"
+                            :disabled="sonucVerileri.length === 0 || (gibKalemDownloads <= 0 && gibFaturaDownloads <= 0)"
+                            class="px-3 py-1.5 bg-red-700 hover:bg-red-800 disabled:bg-red-400 text-white rounded-lg font-bold transition-colors text-xs border-2 border-red-600"
+                        >
+                            <i class="fas fa-file-excel mr-1"></i>
+                            GİB Excel
+                        </button>
+                        
+                        <button 
+                            @click="standartExcelAktar()"
+                            :disabled="sonucVerileri.length === 0 || standartDownloads <= 0"
+                            class="px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white rounded-lg font-bold transition-colors text-xs border-2 border-green-500"
+                        >
+                            <i class="fas fa-file-excel mr-1"></i>
+                            Standart Excel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Overlay -->
+    <div x-show="isCalculating || isApproving" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" x-transition:enter="fade-in">
+        <div class="glass-panel rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div class="text-center">
+                <!-- Hesaplama spinner -->
+                <template x-if="isCalculating">
+                    <div>
+                        <div class="w-16 h-16 border-4 border-white/15 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                        <h3 class="text-lg font-semibold text-white/90 mb-2" x-text="progressMessage"></h3>
+                        <p class="text-sm text-white/60" x-text="progressDetail"></p>
+                        <div class="mt-4 bg-white/10 rounded-full h-3">
+                            <div class="bg-teal-500 h-3 rounded-full transition-all duration-300" :style="`width: ${progressPercent}%`"></div>
+                        </div>
+                        <p class="text-xs text-white/40 mt-2" x-text="`${Math.round(progressPercent)}%`"></p>
+                    </div>
+                </template>
+                <!-- Onay yükleniyor -->
+                <template x-if="isApproving && !approveResult">
+                    <div>
+                        <div class="w-16 h-16 border-4 border-white/15 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                        <h3 class="text-lg font-semibold text-white/90 mb-2">Liste onaylanıyor...</h3>
+                        <p class="text-sm text-white/60">Yüklenilen KDV listesine ekleniyor</p>
+                    </div>
+                </template>
+                <!-- Onay sonucu -->
+                <template x-if="isApproving && approveResult">
+                    <div>
+                        <div class="w-16 h-16 mx-auto mb-4 flex items-center justify-center rounded-full" :class="approveResult.success ? 'bg-green-500/20' : 'bg-red-500/20'">
+                            <i class="fas text-3xl" :class="approveResult.success ? 'fa-check text-green-400' : 'fa-times text-red-400'"></i>
+                        </div>
+                        <h3 class="text-lg font-bold mb-2" :class="approveResult.success ? 'text-green-400' : 'text-red-400'" x-text="approveResult.success ? 'Başarıyla Eklendi!' : 'Hata Oluştu'"></h3>
+                        <p class="text-sm text-white/60 mt-2" x-text="approveResult.message"></p>
+                        <button @click="closeApproveResult()" class="mt-6 px-8 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-bold transition-colors border-2 border-teal-500">Tamam</button>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table Area -->
+    <div class="glass-panel shadow-lg p-4" x-show="sonucVerileri.length > 0">
+
+        <!-- Buttons + Badges -->
+        <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center space-x-2">
+                <button @click="selectAllFiltered()"
+                        class="px-3 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded font-semibold transition-colors text-xs flex items-center border-2 border-teal-500">
+                    <i class="fas fa-check-double mr-1.5"></i>Tümünü Seç
+                </button>
+                <button @click="deselectAll()"
+                        class="px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white rounded font-semibold transition-colors text-xs flex items-center border-2 border-slate-500">
+                    <i class="fas fa-times mr-1.5"></i>Seçimi Kaldır
+                </button>
+                <button @click="deleteSelected()"
+                        :disabled="selectedCount === 0 || deleting"
+                        class="px-3 py-1 bg-red-600 hover:bg-red-700 disabled:bg-white/10 disabled:text-white/30 disabled:cursor-not-allowed text-white rounded font-semibold transition-colors text-xs flex items-center border-2 border-red-500">
+                    <i class="fas fa-trash-alt mr-1.5"></i>Seçileni Sil
+                </button>
+            </div>
+            <div class="flex items-center space-x-2">
+                <div class="glass-panel px-3 py-1.5 rounded flex items-center space-x-2">
+                    <p class="text-xs text-white/40 font-medium">Toplam Kayıt:</p>
+                    <p class="text-sm font-bold text-white/90" x-text="sonucVerileri.length"></p>
+                </div>
+                <div class="glass-panel px-3 py-1.5 rounded flex items-center space-x-2">
+                    <p class="text-xs text-white/40 font-medium">Seçilen:</p>
+                    <p class="text-sm font-bold text-white/90" x-text="selectedCount"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Status Bar -->
+        <div x-show="hasFilters" class="mb-2 flex items-center justify-between bg-teal-500/10 border border-teal-500/20 rounded px-3 py-1.5">
+            <span class="text-xs text-teal-400 font-medium flex items-center">
+                <i class="fas fa-filter mr-1.5"></i>
+                <span x-text="`${filteredData.length} kayit gosteriliyor / toplam ${sonucVerileri.length} kayit`"></span>
+            </span>
+            <button @click="clearFilters()" class="px-2 py-0.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded text-xs font-semibold border border-red-500/20 transition-colors flex items-center ml-3">
+                <i class="fas fa-times mr-1"></i>Temizle
+            </button>
+        </div>
+
+        <div class="overflow-x-auto border border-white/10 rounded-lg">
+            <table class="w-full" style="border-collapse: collapse;">
+                <thead class="bg-white/10 text-white">
+                    <tr>
+                        <th class="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide border border-white/10 w-12">Seç</th>
+                        <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide border border-white/10">Sıra</th>
+                        <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide border border-white/10">Belge Tarihi</th>
+                        <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide border border-white/10">Seri</th>
+                        <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide border border-white/10">No</th>
+                        <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide border border-white/10">Ünvan</th>
+                        <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide border border-white/10">VKN/TC</th>
+                        <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide border border-white/10">Cins</th>
+                        <th class="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide border border-white/10">Miktar</th>
+                        <th class="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide border border-white/10">Matrah</th>
+                        <th class="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide border border-white/10">KDV</th>
+                        <th class="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide border border-white/10">YÜKLENİLEN</th>
+                        <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide border border-white/10">İnd. Dönemi</th>
+                        <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide border border-white/10">Yük. Dönemi</th>
+                        <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide border border-white/10">Ürün Kodu</th>
+                    </tr>
+                    <tr class="bg-white/5">
+                        <td class="px-1 py-1 border border-white/10 text-center">
+                            <input type="checkbox" @change="toggleSelectAll()" :checked="allFilteredSelected"
+                                   class="w-4 h-4 text-teal-600 rounded border-white/15 focus:ring-teal-500 cursor-pointer">
+                        </td>
+                        <td class="px-1 py-1 border border-white/10">
+                            <input type="text" x-model="filterSIRA" @input="currentPage = 1" placeholder="Ara..."
+                                   class="w-full px-1.5 py-0.5 text-xs border border-white/15 rounded bg-white/10 text-white/90 focus:outline-none focus:ring-1 focus:ring-teal-500">
+                        </td>
+                        <td class="px-1 py-1 border border-white/10">
+                            <input type="text" x-model="filterTARIH" @input="currentPage = 1" placeholder="Ara..."
+                                   class="w-full px-1.5 py-0.5 text-xs border border-white/15 rounded bg-white/10 text-white/90 focus:outline-none focus:ring-1 focus:ring-teal-500">
+                        </td>
+                        <td class="px-1 py-1 border border-white/10">
+                            <input type="text" x-model="filterSERI" @input="currentPage = 1" placeholder="Ara..."
+                                   class="w-full px-1.5 py-0.5 text-xs border border-white/15 rounded bg-white/10 text-white/90 focus:outline-none focus:ring-1 focus:ring-teal-500">
+                        </td>
+                        <td class="px-1 py-1 border border-white/10">
+                            <input type="text" x-model="filterNO" @input="currentPage = 1" placeholder="Ara..."
+                                   class="w-full px-1.5 py-0.5 text-xs border border-white/15 rounded bg-white/10 text-white/90 focus:outline-none focus:ring-1 focus:ring-teal-500">
+                        </td>
+                        <td class="px-1 py-1 border border-white/10">
+                            <input type="text" x-model="filterUNVAN" @input="currentPage = 1" placeholder="Ara..."
+                                   class="w-full px-1.5 py-0.5 text-xs border border-white/15 rounded bg-white/10 text-white/90 focus:outline-none focus:ring-1 focus:ring-teal-500">
+                        </td>
+                        <td class="px-1 py-1 border border-white/10">
+                            <input type="text" x-model="filterVKN" @input="currentPage = 1" placeholder="Ara..."
+                                   class="w-full px-1.5 py-0.5 text-xs border border-white/15 rounded bg-white/10 text-white/90 focus:outline-none focus:ring-1 focus:ring-teal-500">
+                        </td>
+                        <td class="px-1 py-1 border border-white/10">
+                            <input type="text" x-model="filterCINS" @input="currentPage = 1" placeholder="Ara..."
+                                   class="w-full px-1.5 py-0.5 text-xs border border-white/15 rounded bg-white/10 text-white/90 focus:outline-none focus:ring-1 focus:ring-teal-500">
+                        </td>
+                        <td class="px-1 py-1 border border-white/10">
+                            <input type="text" x-model="filterMIKTAR" @input="currentPage = 1" placeholder="Ara..."
+                                   class="w-full px-1.5 py-0.5 text-xs border border-white/15 rounded bg-white/10 text-white/90 focus:outline-none focus:ring-1 focus:ring-teal-500">
+                        </td>
+                        <td class="px-1 py-1 border border-white/10">
+                            <input type="text" x-model="filterMATRAH" @input="currentPage = 1" placeholder="Ara..."
+                                   class="w-full px-1.5 py-0.5 text-xs border border-white/15 rounded bg-white/10 text-white/90 focus:outline-none focus:ring-1 focus:ring-teal-500">
+                        </td>
+                        <td class="px-1 py-1 border border-white/10">
+                            <input type="text" x-model="filterKDV" @input="currentPage = 1" placeholder="Ara..."
+                                   class="w-full px-1.5 py-0.5 text-xs border border-white/15 rounded bg-white/10 text-white/90 focus:outline-none focus:ring-1 focus:ring-teal-500">
+                        </td>
+                        <td class="px-1 py-1 border border-white/10">
+                            <input type="text" x-model="filterYUKLENILEN" @input="currentPage = 1" placeholder="Ara..."
+                                   class="w-full px-1.5 py-0.5 text-xs border border-white/15 rounded bg-white/10 text-white/90 focus:outline-none focus:ring-1 focus:ring-teal-500">
+                        </td>
+                        <td class="px-1 py-1 border border-white/10">
+                            <input type="text" x-model="filterIND_DONEM" @input="currentPage = 1" placeholder="Ara..."
+                                   class="w-full px-1.5 py-0.5 text-xs border border-white/15 rounded bg-white/10 text-white/90 focus:outline-none focus:ring-1 focus:ring-teal-500">
+                        </td>
+                        <td class="px-1 py-1 border border-white/10">
+                            <input type="text" x-model="filterYUK_DONEM" @input="currentPage = 1" placeholder="Ara..."
+                                   class="w-full px-1.5 py-0.5 text-xs border border-white/15 rounded bg-white/10 text-white/90 focus:outline-none focus:ring-1 focus:ring-teal-500">
+                        </td>
+                        <td class="px-1 py-1 border border-white/10">
+                            <input type="text" x-model="filterURUN_KODU" @input="currentPage = 1" placeholder="Ara..."
+                                   class="w-full px-1.5 py-0.5 text-xs border border-white/15 rounded bg-white/10 text-white/90 focus:outline-none focus:ring-1 focus:ring-teal-500">
+                        </td>
+                    </tr>
+                </thead>
+                <tbody class="bg-white/10">
+                    <template x-if="sonucVerileri.length === 0">
+                        <tr>
+                            <td colspan="15" class="px-5 py-16 text-center text-white/50">
+                                <div class="flex flex-col items-center">
+                                    <i class="fas fa-inbox text-6xl text-white/30 mb-4"></i>
+                                    <p class="text-xl font-bold text-white/60">Henüz hesaplama yapılmadı</p>
+                                    <p class="text-lg text-white/40 mt-2">"Listeyi Oluştur" butonuna tıklayarak başlayın</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                    <template x-for="(row, index) in paginatedData" :key="currentPage + '-' + index + '-' + JSON.stringify(row)">
+                        <tr class="hover:bg-teal-500/10 transition-colors" :class="{'bg-teal-500/20': isItemSelected(row)}">
+                            <td class="px-3 py-2 text-center border border-white/10">
+                                <input type="checkbox" :checked="isItemSelected(row)" @change="toggleItemSelection(row)"
+                                       class="w-4 h-4 text-teal-600 rounded border-white/15 focus:ring-teal-500 cursor-pointer">
+                            </td>
+                            <td class="px-3 py-2 text-xs text-white/80 border border-white/10" x-text="row[0]"></td>
+                            <td class="px-3 py-2 text-xs text-white/80 border border-white/10" x-text="truncateText(row[1], 15)" :title="row[1]"></td>
+                            <td class="px-3 py-2 text-xs text-white/80 border border-white/10" x-text="truncateText(row[2], 10)" :title="row[2]"></td>
+                            <td class="px-3 py-2 text-xs text-white/80 border border-white/10" x-text="truncateText(row[3], 25)" :title="row[3]"></td>
+                            <td class="px-3 py-2 text-xs text-white/80 border border-white/10" x-text="truncateText(row[4], 40)" :title="row[4]"></td>
+                            <td class="px-3 py-2 text-xs text-white/80 border border-white/10" x-text="truncateText(row[5], 15)" :title="row[5]"></td>
+                            <td class="px-3 py-2 text-xs text-white/80 border border-white/10" x-text="truncateText(row[6], 50)" :title="row[6]"></td>
+                            <td class="px-3 py-2 text-xs text-white/80 text-right border border-white/10" x-text="truncateText(formatNumber(row[7]), 20)" :title="formatNumber(row[7])"></td>
+                            <td class="px-3 py-2 text-xs text-white/80 text-right border border-white/10" x-text="truncateText(formatNumber(row[8]), 20)" :title="formatNumber(row[8])"></td>
+                            <td class="px-3 py-2 text-xs text-white/80 text-right border border-white/10" x-text="truncateText(formatNumber(row[9]), 20)" :title="formatNumber(row[9])"></td>
+                            <td class="px-3 py-2 text-xs text-white/80 text-right border border-white/10 font-bold" x-text="truncateText(formatNumber(row[10]), 20)" :title="formatNumber(row[10])"></td>
+                            <td class="px-3 py-2 text-xs text-white/80 border border-white/10" x-text="truncateText(row[11], 15)" :title="row[11]"></td>
+                            <td class="px-3 py-2 text-xs text-white/80 border border-white/10" x-text="truncateText(row[12], 15)" :title="row[12]"></td>
+                            <td class="px-3 py-2 text-xs text-white/80 border border-white/10" x-text="truncateText(row[13], 20)" :title="row[13]"></td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        <div x-show="totalPages > 1" class="mt-4 flex items-center justify-between">
+            <div class="text-sm text-white/60 font-medium">
+                <span x-text="`Sayfa ${currentPage} / ${totalPages}`"></span>
+                <span class="mx-2">|</span>
+                <span x-text="`${currentPageInfo.start}-${currentPageInfo.end} arası / ${currentPageInfo.total} kayıt`"></span>
+                <span class="text-white/40" x-text="`(${currentPageInfo.count} satır)`"></span>
+                <span x-show="currentPageInfo.total !== currentPageInfo.totalAll" class="ml-2 text-teal-400 font-semibold" x-text="`[${currentPageInfo.totalAll} kayıttan filtrelendi]`"></span>
+            </div>
+            <div class="flex items-center space-x-1">
+                <button @click="previousPage()" 
+                        :disabled="currentPage === 1"
+                        class="px-3 py-2 bg-white/10 hover:bg-white/20 disabled:bg-white/5 disabled:text-white/30 rounded-lg font-bold transition-colors text-sm border border-white/15">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                
+                <!-- Page Numbers -->
+                <template x-for="pageNum in pageNumbers" :key="pageNum">
+                    <button @click="goToPage(pageNum)" 
+                            :class="pageNum === currentPage ? 'bg-teal-600 text-white' : 'bg-white/10 text-white/90 hover:bg-white/20'"
+                            class="px-3 py-2 rounded-lg font-bold transition-colors text-sm min-w-[40px] border border-white/15">
+                        <span x-text="pageNum"></span>
+                    </button>
+                </template>
+                
+                <button @click="nextPage()" 
+                        :disabled="currentPage === totalPages"
+                        class="px-3 py-2 bg-white/10 hover:bg-white/20 disabled:bg-white/5 disabled:text-white/30 rounded-lg font-bold transition-colors text-sm border border-white/15">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Onay Uyarı Modalı -->
+    <div x-show="showApproveModal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+        <div class="glass-panel rounded-2xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden" @click.stop>
+            <!-- Modal Header -->
+            <div class="bg-yellow-500/20 px-6 py-4 flex items-center gap-3">
+                <div class="flex-shrink-0 w-10 h-10 bg-white/10 rounded-full flex items-center justify-center">
+                    <i class="fas fa-exclamation-triangle text-yellow-400 text-lg"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-white/90">Onay Gerekli</h3>
+                    <p class="text-yellow-400/80 text-xs">Lütfen devam etmeden önce aşağıdaki bilgileri dikkatlice okuyun</p>
+                </div>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="px-6 py-5 space-y-4">
+                <div class="flex gap-3 bg-white/10 border border-white/10 rounded-xl p-4">
+                    <i class="fas fa-info-circle text-teal-400 text-lg flex-shrink-0 mt-0.5"></i>
+                    <p class="text-sm text-white/80 leading-relaxed">
+                        <span class="font-bold text-white/90">Mevcut yüklenilen KDV listesini onaylamak üzeresiniz.</span>
+                    </p>
+                </div>
+
+                <ul class="space-y-2.5 text-sm text-white/80">
+                    <li class="flex gap-2.5">
+                        <i class="fas fa-arrow-right text-teal-400 flex-shrink-0 mt-0.5"></i>
+                        <span>Onayladığınız takdirde ilgili yüklenimler <span class="font-bold text-white/90">stok KDV listesinden düşecektir.</span></span>
+                    </li>
+                    <li class="flex gap-2.5">
+                        <i class="fas fa-arrow-right text-yellow-400 flex-shrink-0 mt-0.5"></i>
+                        <span>Tekrar yüklenilen KDV listesi oluşturulup onaylanması halinde <span class="font-bold text-white/90">bu liste iptal edilip yeni liste dikkate alınacaktır.</span></span>
+                    </li>
+                </ul>
+
+                <div class="glass-panel border border-white/10 rounded-lg px-4 py-2.5 flex items-center gap-2">
+                    <i class="fas fa-shield-alt text-white/40 text-sm"></i>
+                    <p class="text-xs text-white/60">Bu işlem sisteme kaydedilecektir. Onaylamak istediğinizden emin misiniz?</p>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 bg-white/5 border-t border-white/10 flex items-center justify-end gap-3">
+                <button 
+                    @click="showApproveModal = false"
+                    class="px-5 py-2 bg-white/10 hover:bg-white/20 text-white/90 rounded-lg font-semibold text-sm border-2 border-white/15 transition-colors"
+                >
+                    <i class="fas fa-times mr-1.5"></i>İptal
+                </button>
+                <button 
+                    @click="approveYuklenilen()"
+                    class="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-bold text-sm border-2 border-teal-500 transition-colors flex items-center gap-2"
+                >
+                    <i class="fas fa-check-circle"></i>
+                    Evet, Onayla
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Mode Selection Modal -->
+    <div x-show="showExportModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" x-transition:enter="fade-in">
+        <div class="glass-panel rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <h3 class="text-xl font-bold text-white/90 mb-4">Aktarım Modu Seçin</h3>
+            <p class="text-sm text-white/60 mb-6">Cins ve Miktar Kısmı Nasıl Olsun?</p>
+            <p class="text-xs text-white/40 mb-6 italic">Not: Matrah-KDV Değişmez.</p>
+            
+            <div class="space-y-3 mb-6">
+                <button 
+                    @click="selectExportMode('kalem')"
+                    class="w-full px-4 py-3 bg-white/10 hover:bg-white/20 text-left rounded-lg border-2 border-white/15 transition-colors"
+                >
+                    <div class="font-bold text-white/90">📋 Kalem Bazlı</div>
+                    <div class="text-sm text-white/60">Sadece yüklenilen kalemler yazılsın</div>
+                </button>
+                
+                <button 
+                    @click="selectExportMode('fatura')"
+                    class="w-full px-4 py-3 bg-white/10 hover:bg-white/20 text-left rounded-lg border-2 border-white/15 transition-colors"
+                >
+                    <div class="font-bold text-white/90">📊 Tüm Fatura İçeriği</div>
+                    <div class="text-sm text-white/60">Faturadaki tüm ürünler yazılsın</div>
+                </button>
+            </div>
+            
+            <button 
+                @click="showExportModal = false"
+                class="w-full px-4 py-2 bg-white/10 hover:bg-white/20 text-white/90 rounded-lg font-bold transition-colors border-2 border-white/15"
+            >
+                İptal
+            </button>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,36 @@
+<!-- Header -->
+    <div class="mb-3">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <a href="/app" class="px-2 py-1 rounded-md font-medium flex items-center text-xs glass-btn">
+                    <i class="fas fa-arrow-left mr-1"></i>Geri Dön
+                </a>
+                <div>
+                    <h1 class="text-lg font-bold text-white/90">Yüklenilen KDV Yönetimi</h1>
+                    <p class="text-xs text-white/50">5 adet sekme ile entegre KDV yükleme ve hesaplama modülleri</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <!-- Seçili Mükellef Göstergesi -->
+                <div x-show="activeMukellefAd" x-cloak class="flex items-center space-x-2 px-3 py-1.5 pill-glass pill-blue">
+                    <i class="fas fa-building text-xs"></i>
+                    <span class="text-xs font-semibold" x-text="activeMukellefAd"></span>
+                    <button @click="mukellefDegistir()" class="ml-1 opacity-70 hover:opacity-100" title="Mükellef Değiştir">
+                        <i class="fas fa-exchange-alt text-xs"></i>
+                    </button>
+                </div>
+                <!-- Seçili Dönem Göstergesi -->
+                <div x-show="activeDonemEtiket" x-cloak class="flex items-center space-x-2 px-3 py-1.5 pill-glass pill-amber">
+                    <i class="fas fa-calendar-alt text-xs"></i>
+                    <span class="text-xs font-semibold" x-text="activeDonemEtiket"></span>
+                    <button @click="donemDegistir()" class="ml-1 opacity-70 hover:opacity-100" title="Dönem Değiştir">
+                        <i class="fas fa-exchange-alt text-xs"></i>
+                    </button>
+                </div>
+                <a x-show="activeMukellefId" x-cloak href="/urun-listesi"
+                   class="px-3 py-1.5 rounded-lg font-semibold text-xs flex items-center accent-btn">
+                    <i class="fas fa-tags mr-1.5"></i>Ürün Listesi
+                </a>
+            </div>
+        </div>
+    </div>

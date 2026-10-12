@@ -1,0 +1,1024 @@
+﻿{% extends "base.html" %}
+
+{% block title %}KDV Asistan - Yüklenilen KDV Yönetimi{% endblock %}
+
+{% block content %}
+<style>
+    /* Dark theme override for this page */
+    body {
+        background: linear-gradient(135deg, #0a1628 0%, #0e2240 45%, #0c1e3a 100%) !important;
+    }
+    /* Glass card style reused from index */
+    .glass-panel {
+        background: rgba(220, 230, 245, 0.13);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border: 1px solid rgba(210, 225, 245, 0.22);
+        border-radius: 16px;
+    }
+    .glass-btn {
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.18);
+        color: rgba(255,255,255,0.65);
+        transition: background 0.2s, border-color 0.2s, color 0.2s;
+    }
+    .glass-btn:hover {
+        background: rgba(255,255,255,0.15);
+        border-color: rgba(255,255,255,0.28);
+        color: rgba(255,255,255,0.9);
+    }
+    .accent-btn {
+        background: linear-gradient(135deg, #14b8a6, #0d9488);
+        color: #fff;
+        border: none;
+        box-shadow: 0 4px 14px rgba(20,184,166,0.35);
+        transition: transform 0.15s, box-shadow 0.2s;
+    }
+    .accent-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(20,184,166,0.45);
+    }
+    .pill-glass {
+        background: rgba(255,255,255,0.08);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.16);
+        border-radius: 9999px;
+    }
+    .pill-blue { border-color: rgba(59,130,246,0.35); color: #3b82f6; }
+    .pill-amber { border-color: rgba(245,158,11,0.35); color: #f59e0b; }
+</style>
+
+<!-- Ambient glow background (fixed, doesn't scroll) -->
+<div class="fixed inset-0 pointer-events-none" style="z-index:0; background: radial-gradient(ellipse 55% 45% at 15% 15%, rgba(59,130,246,0.09) 0%, transparent 60%), radial-gradient(ellipse 45% 40% at 85% 85%, rgba(139,92,246,0.09) 0%, transparent 60%), radial-gradient(ellipse 35% 35% at 50% 50%, rgba(20,184,166,0.05) 0%, transparent 65%);"></div>
+
+<div x-data="yuklenenApp" class="relative min-h-screen" style="z-index:1;">
+    {% include "partials/mukellef_modal.html" %}
+    {% include "partials/yuklenen_header.html" %}
+    {% include "partials/tab_navigation.html" %}
+
+    <!-- Dynamic Content Area -->
+    <!-- Tab 1: Indirilecek KDV Listeleri -->
+    <div x-show="activeTab === 'indirilecek'" x-cloak x-transition:enter="fade-in">
+        <div id="tab-indirilecek-container">
+            <!-- Tab content will be loaded here -->
+            <div class="text-center py-8">
+                <div class="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p class="text-gray-600">Yükleniyor...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 2: Yuklenilen KDV Listeleri -->
+    <div x-show="activeTab === 'yuklenilen'" x-cloak x-transition:enter="fade-in">
+        <div id="tab-yuklenilen-container">
+            <!-- Tab content will be loaded here -->
+            <div class="text-center py-8">
+                <div class="w-8 h-8 border-2 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p class="text-gray-600">Yükleniyor...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 3: Hazir Faturalar -->
+    <div x-show="activeTab === 'hazir'" x-cloak x-transition:enter="fade-in" class="space-y-6">
+        <div id="tab-hazir-container">
+            <!-- Tab content will be loaded here -->
+            <div class="text-center py-8">
+                <div class="w-8 h-8 border-2 border-orange-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p class="text-gray-600">Yükleniyor...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 4: Imalat Tablosu -->
+    <div x-show="activeTab === 'imalat'" x-cloak x-transition:enter="fade-in" class="space-y-6">
+        <div id="tab-imalat-container">
+            <!-- Tab content will be loaded here -->
+            <div class="text-center py-8">
+                <div class="w-8 h-8 border-2 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p class="text-gray-600">Yükleniyor...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 5: SONUC -->
+    <div x-show="activeTab === 'sonuc'" x-cloak x-transition:enter="fade-in" class="space-y-6">
+        <div id="tab-sonuc-container">
+            <!-- Tab content will be loaded here -->
+            <div class="text-center py-8">
+                <div class="w-8 h-8 border-2 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p class="text-gray-600">Yükleniyor...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% include "partials/yuklenen_kdv_styles.html" %}
+
+<script src="/static/js/indirilecek.js"></script>
+<script src="/static/js/yuklenilen.js"></script>
+<script src="/static/js/karsilastirma.js"></script>
+<script src="/static/js/imalat.js"></script>
+<script src="/static/js/iadeHesapla.js"></script>
+
+<script>
+// Global fallback function for tab switching
+window.switchTab = function(tabName) {
+    console.log('Global switchTab called with:', tabName);
+    // Try to find the Alpine component and call its method
+    const app = document.querySelector('[x-data*="yuklenenApp"]');
+    if (app && app._x_dataStack && app._x_dataStack[0]) {
+        const data = app._x_dataStack[0];
+        if (data.switchTab) {
+            data.switchTab(tabName);
+        } else {
+            // Fallback: manually update the active tab
+            data.activeTab = tabName;
+        }
+    }
+};
+
+document.addEventListener('alpine:initialized', () => {
+    console.log('Alpine.js initialized');
+});
+
+document.addEventListener('alpine:init', () => {
+    console.log('Alpine.js initializing...');
+
+    Alpine.data('yuklenenApp', () => ({
+        activeTab: 'indirilecek',
+        // Mukellef / Donem state
+        showMukellefModal: false,
+        modalStep: 'mukellef',
+        mukellefListe: [],
+        mukellefListeLoading: false,
+        mukellefArama: '',
+        activeMukellefId: '',
+        activeMukellefAd: '',
+        donemListe: [],
+        donemListeLoading: false,
+        donemArama: '',
+        activeDonemId: '',
+        activeDonemEtiket: '',
+        donemBaslangicAy: 1,
+        donemBitisAy: 1,
+        donemYil: new Date().getFullYear(),
+        donemYillar: Array.from({length: 10}, (_, i) => new Date().getFullYear() - 2 + i),
+        aylar: ['Ocak', '\u015eubat', 'Mart', 'Nisan', 'May\u0131s', 'Haziran', 'Temmuz', 'A\u011fustos', 'Eyl\u00fcl', 'Ekim', 'Kas\u0131m', 'Aral\u0131k'],
+        donemEkleLoading: false,
+        donemEkleHata: '',
+        showDonemEkleForm: false,
+        // Separate data stores for each tab
+        tabDataStores: {
+            indirilecek: {
+                processedData: [],
+                sessionId: '',
+                currentPage: 1,
+                errorMessages: [],
+                uploading: false,
+                progress: 0,
+                progressText: ''
+            },
+            yuklenilen: {
+                processedData: [],
+                sessionId: '',
+                currentPage: 1,
+                errorMessages: [],
+                uploading: false,
+                progress: 0,
+                progressText: ''
+            },
+            hazir: {
+                processedData: [],
+                sessionId: '',
+                currentPage: 1,
+                errorMessages: [],
+                uploading: false,
+                progress: 0,
+                progressText: ''
+            },
+            imalat: {
+                processedData: [],
+                sessionId: '',
+                currentPage: 1,
+                errorMessages: [],
+                uploading: false,
+                progress: 0,
+                progressText: ''
+            },
+            sonuc: {
+                processedData: [],
+                sessionId: '',
+                currentPage: 1,
+                errorMessages: [],
+                uploading: false,
+                progress: 0,
+                progressText: ''
+            }
+        },
+        
+        // Upload functionality - now using current tab's data store
+        file: null,
+        isDragging: false,
+        itemsPerPage: 50,
+        
+        init() {
+            console.log('Yuklened app initialized');
+            window.yuklenenApp = this;
+            this.loadData();
+            Object.keys(this.tabDataStores).forEach(tab => {
+                this.tabDataStores[tab].sessionId = this.generateSessionId(tab);
+            });
+            // ?select=1 parametresi varsa (ana menüden geliniyorsa) her zaman modal aç
+            const _urlParams = new URLSearchParams(window.location.search);
+            const _forceSelect = _urlParams.get('select') === '1';
+            if (_forceSelect) {
+                history.replaceState({}, '', window.location.pathname);
+                this.mukellefModalAc();
+            } else {
+                const savedMukellefId = localStorage.getItem('active_mukellef_id') || '';
+                const savedMukellefAd = localStorage.getItem('active_mukellef_ad') || '';
+                const savedDonemId = localStorage.getItem('active_donem_id') || '';
+                const savedDonemEtiket = localStorage.getItem('active_donem_etiket') || '';
+                if (savedMukellefId && savedDonemId) {
+                    this.activeMukellefId = savedMukellefId;
+                    this.activeMukellefAd = savedMukellefAd;
+                    this.activeDonemId = savedDonemId;
+                    this.activeDonemEtiket = savedDonemEtiket;
+                    this.showMukellefModal = false;
+                    this.$nextTick(() => {
+                        if (this.activeTab === 'indirilecek') this.loadIndirilecekTab();
+                        else if (this.activeTab === 'yuklenilen') this.loadYuklenilenTab();
+                        else if (this.activeTab === 'hazir') this.loadHazirTab();
+                        else if (this.activeTab === 'imalat') this.loadImalatTab();
+                        else if (this.activeTab === 'sonuc') this.loadSonucTab();
+                    });
+                } else {
+                    this.mukellefModalAc();
+                }
+            }
+        },
+
+        async mukellefModalAc() {
+            this.showMukellefModal = true;
+            this.modalStep = 'mukellef';
+            this.mukellefListeLoading = true;
+            this.mukellefArama = '';
+            try {
+                const token = localStorage.getItem('session_token') || '';
+                const r = await fetch('/api/mukellef/list', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const d = await r.json();
+                this.mukellefListe = d.success ? (d.mukellefler || []) : [];
+            } catch (e) {
+                console.error('Mükellef listesi alınamadı:', e);
+                this.mukellefListe = [];
+            } finally {
+                this.mukellefListeLoading = false;
+            }
+        },
+
+        mukellefSec(m) {
+            this.activeMukellefId = m.id;
+            this.activeMukellefAd = m.ad;
+            localStorage.setItem('active_mukellef_id', m.id);
+            localStorage.setItem('active_mukellef_ad', m.ad);
+            // Clear donem since mukellef changed
+            this.activeDonemId = '';
+            this.activeDonemEtiket = '';
+            localStorage.removeItem('active_donem_id');
+            localStorage.removeItem('active_donem_etiket');
+            // Clear all tab data when mukellef changes
+            Object.keys(this.tabDataStores).forEach(tab => {
+                this.tabDataStores[tab].processedData = [];
+                this.tabDataStores[tab].sessionId = '';
+                this.tabDataStores[tab].currentPage = 1;
+                this.tabDataStores[tab].errorMessages = [];
+                this.tabDataStores[tab].uploading = false;
+                this.tabDataStores[tab].progress = 0;
+                this.tabDataStores[tab].progressText = '';
+            });
+            // Clear tab containers
+            ['indirilecek','yuklenilen','hazir','imalat','sonuc'].forEach(tab => {
+                const container = document.getElementById(`tab-${tab}-container`);
+                if (container) { container.innerHTML = ''; delete container.dataset.loaded; }
+            });
+            this.saveData();
+            this.donemModalAc();
+        },
+
+        mukellefDegistir() {
+            this.mukellefModalAc();
+        },
+
+        async donemModalAc() {
+            this.showMukellefModal = true;
+            this.modalStep = 'donem';
+            this.donemListeLoading = true;
+            this.donemArama = '';
+            this.donemEkleHata = '';
+            this.showDonemEkleForm = false;
+            try {
+                const token = localStorage.getItem('session_token') || '';
+                const r = await fetch(`/api/mukellef/${this.activeMukellefId}/donem/list`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const d = await r.json();
+                this.donemListe = d.success ? (d.donemler || []) : [];
+            } catch (e) {
+                console.error('Donem listesi alinamadi:', e);
+                this.donemListe = [];
+            } finally {
+                this.donemListeLoading = false;
+            }
+        },
+
+        toggleDonemEkleForm() {
+            this.showDonemEkleForm = !this.showDonemEkleForm;
+        },
+
+        donemSec(d) {
+            this.activeDonemId = d.id;
+            this.activeDonemEtiket = d.etiket;
+            localStorage.setItem('active_donem_id', d.id);
+            localStorage.setItem('active_donem_etiket', d.etiket);
+            this.showMukellefModal = false;
+            // Clear all tab data when donem changes
+            Object.keys(this.tabDataStores).forEach(tab => {
+                this.tabDataStores[tab].processedData = [];
+                this.tabDataStores[tab].sessionId = '';
+                this.tabDataStores[tab].currentPage = 1;
+                this.tabDataStores[tab].errorMessages = [];
+                this.tabDataStores[tab].uploading = false;
+                this.tabDataStores[tab].progress = 0;
+                this.tabDataStores[tab].progressText = '';
+            });
+            // Reset tabs so they reload with new donem data
+            ['indirilecek','yuklenilen','hazir','imalat','sonuc'].forEach(tab => {
+                const container = document.getElementById(`tab-${tab}-container`);
+                if (container) { container.innerHTML = ''; delete container.dataset.loaded; }
+            });
+            this.saveData();
+            // Load active tab - it will automatically fetch data from API
+            if (this.activeTab === 'indirilecek') {
+                this.loadIndirilecekTab();
+            } else if (this.activeTab === 'yuklenilen') {
+                this.loadYuklenilenTab();
+            } else if (this.activeTab === 'hazir') {
+                this.loadHazirTab();
+            } else if (this.activeTab === 'imalat') {
+                this.loadImalatTab();
+            } else if (this.activeTab === 'sonuc') {
+                this.loadSonucTab();
+            }
+        },
+
+        donemDegistir() {
+            this.donemModalAc();
+        },
+
+        donemEtiketOnizle() {
+            const bas = parseInt(this.donemBaslangicAy);
+            const bit = parseInt(this.donemBitisAy);
+            const yil = parseInt(this.donemYil);
+            if (bas === bit) return `${this.aylar[bas - 1]}/${yil}`;
+            return `${this.aylar[bas - 1]}-${this.aylar[bit - 1]}/${yil}`;
+        },
+
+        get filteredMukellefListe() {
+            if (!this.mukellefArama) return this.mukellefListe;
+            const search = this.mukellefArama.toLowerCase();
+            return this.mukellefListe.filter(m =>
+                (m.ad || '').toLowerCase().includes(search) ||
+                (m.vkn || '').includes(search)
+            );
+        },
+
+        get filteredDonemListe() {
+            if (!this.donemArama) return this.donemListe;
+            const search = this.donemArama.toLowerCase();
+            return this.donemListe.filter(d =>
+                (d.etiket || '').toLowerCase().includes(search)
+            );
+        },
+
+        async donemEkle() {
+            this.donemEkleHata = '';
+            const bas = parseInt(this.donemBaslangicAy);
+            const bit = parseInt(this.donemBitisAy);
+            if (bit < bas) {
+                this.donemEkleHata = 'Biti\u015f ay\u0131 ba\u015flang\u0131\u00e7 ay\u0131ndan \u00f6nce olamaz.';
+                return;
+            }
+            const etiket = this.donemEtiketOnizle();
+            if (this.donemListe.some(d => d.etiket === etiket)) {
+                this.donemEkleHata = 'Bu d\u00f6nem daha \u00f6nce eklenmi\u015f.';
+                return;
+            }
+            this.donemEkleLoading = true;
+            try {
+                const token = localStorage.getItem('session_token') || '';
+                const r = await fetch(`/api/mukellef/${this.activeMukellefId}/donem/add`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ etiket: etiket })
+                });
+                const d = await r.json();
+                if (d.success) {
+                    this.donemListe.push(d.donem);
+                } else {
+                    this.donemEkleHata = d.error || 'D\u00f6nem eklenemedi.';
+                }
+            } catch (e) {
+                this.donemEkleHata = 'Ba\u011flant\u0131 hatas\u0131.';
+            } finally {
+                this.donemEkleLoading = false;
+            }
+        },
+
+        generateSessionId(tabName) {
+            return tabName + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        },
+
+        getAuthHeaders() {
+            const token = localStorage.getItem('session_token') || '';
+            const headers = { 'Authorization': `Bearer ${token}` };
+            if (this.activeMukellefId) headers['X-Mukellef-Id'] = this.activeMukellefId;
+            if (this.activeDonemId) headers['X-Donem-Id'] = this.activeDonemId;
+            return headers;
+        },
+        
+        loadData() {
+            const savedData = localStorage.getItem('yuklenenKdvData');
+            if (savedData) {
+                try {
+                    const data = JSON.parse(savedData);
+                    this.tabDataStores = data.tabDataStores || this.tabDataStores;
+                    // Clear processedData on page load - user must select period to fetch data
+                    if (this.tabDataStores.indirilecek) {
+                        this.tabDataStores.indirilecek.processedData = [];
+                    }
+                    if (this.tabDataStores.yuklenilen) {
+                        this.tabDataStores.yuklenilen.processedData = [];
+                    }
+                } catch (error) {
+                    console.error('Error loading saved data:', error);
+                }
+            }
+        },
+        
+        saveData() {
+            try {
+                const storeToSave = {};
+                Object.keys(this.tabDataStores).forEach(tab => {
+                    const { processedData, errorMessages, ...rest } = this.tabDataStores[tab];
+                    storeToSave[tab] = rest;
+                });
+                localStorage.setItem('yuklenenKdvData', JSON.stringify({
+                    tabDataStores: storeToSave
+                }));
+            } catch (e) {
+                console.warn('localStorage quota exceeded, skipping save:', e.name);
+            }
+        },
+        
+        switchTab(tabName) {
+            console.log('Switching to tab:', tabName);
+            this.activeTab = tabName;
+            // Reset pagination for the current tab
+            this.tabDataStores[tabName].currentPage = 1;
+
+            // Load tab content when activated
+            if (tabName === 'indirilecek') {
+                this.loadIndirilecekTab();
+            } else if (tabName === 'yuklenilen') {
+                this.loadYuklenilenTab();
+            } else if (tabName === 'hazir') {
+                this.loadHazirTab();
+            } else if (tabName === 'imalat') {
+                this.loadImalatTab();
+            } else if (tabName === 'sonuc') {
+                this.loadSonucTab();
+            }
+        },
+        
+        async loadIndirilecekTab() {
+            const container = document.getElementById('tab-indirilecek-container');
+            if (container && !container.dataset.loaded) {
+                try {
+                    // Fetch with timeout for tab content
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000);
+                    
+                    const response = await fetch('/tab-indirilecek', { signal: controller.signal });
+                    clearTimeout(timeoutId);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const html = await response.text();
+                    container.innerHTML = html;
+                    // Execute embedded scripts so Alpine component functions become global
+                    container.querySelectorAll('script').forEach(s => {
+                        const ns = document.createElement('script');
+                        ns.textContent = s.textContent;
+                        document.head.appendChild(ns);
+                        document.head.removeChild(ns);
+                    });
+                    if (window.Alpine) Alpine.initTree(container);
+                    
+                    // Wait for Alpine component to initialize with retry mechanism
+                    const waitForAlpineComponent = (maxAttempts = 10, delay = 100) => {
+                        return new Promise((resolve, reject) => {
+                            let attempts = 0;
+                            const checkComponent = () => {
+                                attempts++;
+                                const el = container.querySelector('[x-data*="indirilecekTabApp"]');
+                                if (el && el._x_dataStack && el._x_dataStack[0]) {
+                                    resolve(el._x_dataStack[0]);
+                                } else if (attempts >= maxAttempts) {
+                                    reject(new Error('Alpine component not found after retries'));
+                                } else {
+                                    setTimeout(checkComponent, delay);
+                                }
+                            };
+                            checkComponent();
+                        });
+                    };
+                    
+                    try {
+                        const app = await waitForAlpineComponent();
+
+                        // Don't auto-load data - user must select period and click "Verileri Getir"
+                        // Clear processedData to ensure no old data is shown
+                        this.tabDataStores.indirilecek.processedData = [];
+                        this.tabDataStores.indirilecek.errorMessages = [];
+                        this.tabDataStores.indirilecek.currentPage = 1;
+                        app.processedData = [];
+                        app.errorMessages = [];
+                        app.currentPage = 1;
+
+                        // Mark as loaded
+                        container.dataset.loaded = 'true';
+                    } catch (componentError) {
+                        console.error('Error waiting for Alpine component:', componentError);
+                        container.innerHTML = '<div class="text-center py-8 text-red-600">Bileşen yüklenemedi. Sayfayı yenileyin.</div>';
+                        // Remove loaded flag so it can retry
+                        delete container.dataset.loaded;
+                    }
+                } catch (error) {
+                    console.error('Error loading tab content:', error);
+                    if (error.name === 'AbortError') {
+                        container.innerHTML = '<div class="text-center py-8 text-red-600">İstek zaman aşımına uğradı. İnternet bağlantınızı kontrol edin veya sayfayı yenileyin.</div>';
+                    } else {
+                        container.innerHTML = '<div class="text-center py-8 text-red-600">Yükleme hatası: ' + error.message + '</div>';
+                    }
+                    delete container.dataset.loaded;
+                }
+            }
+        },
+        
+        async loadYuklenilenTab() {
+            const container = document.getElementById('tab-yuklenilen-container');
+            if (container && !container.dataset.loaded) {
+                try {
+                    // Fetch with timeout for tab content
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000);
+                    
+                    const response = await fetch('/tab-yuklenilen', { signal: controller.signal });
+                    clearTimeout(timeoutId);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const html = await response.text();
+                    container.innerHTML = html;
+                    // Execute embedded scripts so Alpine component functions become global
+                    container.querySelectorAll('script').forEach(s => {
+                        const ns = document.createElement('script');
+                        ns.textContent = s.textContent;
+                        document.head.appendChild(ns);
+                        document.head.removeChild(ns);
+                    });
+                    if (window.Alpine) Alpine.initTree(container);
+                    
+                    // Wait for Alpine component to initialize with retry mechanism
+                    const waitForAlpineComponent = (maxAttempts = 10, delay = 100) => {
+                        return new Promise((resolve, reject) => {
+                            let attempts = 0;
+                            const checkComponent = () => {
+                                attempts++;
+                                const el = container.querySelector('[x-data*="yuklenilenTabApp"]');
+                                if (el && el._x_dataStack && el._x_dataStack[0]) {
+                                    resolve(el._x_dataStack[0]);
+                                } else if (attempts >= maxAttempts) {
+                                    reject(new Error('Alpine component not found after retries'));
+                                } else {
+                                    setTimeout(checkComponent, delay);
+                                }
+                            };
+                            checkComponent();
+                        });
+                    };
+                    
+                    try {
+                        const app = await waitForAlpineComponent();
+
+                        // Don't auto-load data - user must select period and click "Verileri Getir"
+                        // Clear processedData to ensure no old data is shown
+                        this.tabDataStores.yuklenilen.processedData = [];
+                        this.tabDataStores.yuklenilen.errorMessages = [];
+                        this.tabDataStores.yuklenilen.currentPage = 1;
+                        app.processedData = [];
+                        app.errorMessages = [];
+                        app.currentPage = 1;
+
+                        // Mark as loaded
+                        container.dataset.loaded = 'true';
+                    } catch (componentError) {
+                        console.error('Error waiting for Alpine component:', componentError);
+                        container.innerHTML = '<div class="text-center py-8 text-red-600">Bileşen yüklenemedi. Sayfayı yenileyin.</div>';
+                        // Remove loaded flag so it can retry
+                        delete container.dataset.loaded;
+                    }
+                } catch (error) {
+                    console.error('Error loading tab content:', error);
+                    if (error.name === 'AbortError') {
+                        container.innerHTML = '<div class="text-center py-8 text-red-600">İstek zaman aşımına uğradı. İnternet bağlantınızı kontrol edin veya sayfayı yenileyin.</div>';
+                    } else {
+                        container.innerHTML = '<div class="text-center py-8 text-red-600">Yükleme hatası: ' + error.message + '</div>';
+                    }
+                    delete container.dataset.loaded;
+                }
+            }
+        },
+        
+        async loadHazirTab() {
+            const container = document.getElementById('tab-hazir-container');
+            if (container && !container.dataset.loaded) {
+                try {
+                    const response = await fetch('/tab-karsilastirma');
+                    const html = await response.text();
+                    container.innerHTML = html;
+                    container.dataset.loaded = 'true';
+                    // Wait for Alpine to initialize then check data availability
+                    setTimeout(() => {
+                        const el = container.querySelector('[x-data*="karsilastirmaTabApp"]');
+                        if (el && el._x_dataStack && el._x_dataStack[0]) {
+                            const app = el._x_dataStack[0];
+                            if (app.checkDataAvailability) {
+                                app.checkDataAvailability();
+                            }
+                        }
+                    }, 100);
+                } catch (error) {
+                    console.error('Error loading tab content:', error);
+                    container.innerHTML = '<div class="text-center py-8 text-red-600">Yükleme hatasi</div>';
+                }
+            } else if (container && container.dataset.loaded) {
+                // Tab already loaded, just check data availability
+                setTimeout(() => {
+                    const el = container.querySelector('[x-data*="karsilastirmaTabApp"]');
+                    if (el && el._x_dataStack && el._x_dataStack[0]) {
+                        const app = el._x_dataStack[0];
+                        if (app.checkDataAvailability) {
+                            app.checkDataAvailability();
+                        }
+                    }
+                }, 50);
+            }
+        },
+
+        async loadImalatTab() {
+            const container = document.getElementById('tab-imalat-container');
+            if (container && !container.dataset.loaded) {
+                try {
+                    const response = await fetch('/tab-imalat');
+                    const html = await response.text();
+                    container.innerHTML = html;
+                    container.dataset.loaded = 'true';
+                    if (window.Alpine) Alpine.initTree(container);
+                } catch (error) {
+                    console.error('Error loading imalat tab content:', error);
+                    container.innerHTML = '<div class="text-center py-8 text-red-600">Yükleme hatasi</div>';
+                }
+            }
+            window.dispatchEvent(new CustomEvent('imalat-tab-activated'));
+        },
+
+        async loadSonucTab() {
+            const container = document.getElementById('tab-sonuc-container');
+            if (container && !container.dataset.loaded) {
+                try {
+                    const response = await fetch('/tab-iade-hesapla');
+                    const html = await response.text();
+                    container.innerHTML = html;
+                    container.dataset.loaded = 'true';
+                    // Scripts in innerHTML don't execute, so we need to manually execute them
+                    const scripts = container.querySelectorAll('script');
+                    scripts.forEach(script => {
+                        const newScript = document.createElement('script');
+                        newScript.textContent = script.textContent;
+                        document.head.appendChild(newScript);
+                        document.head.removeChild(newScript);
+                    });
+                    if (window.Alpine) Alpine.initTree(container);
+                } catch (error) {
+                    console.error('Error loading sonuc tab content:', error);
+                    container.innerHTML = '<div class="text-center py-8 text-red-600">Yükleme hatasi</div>';
+                }
+            }
+        },
+
+        // File handling
+        handleDrop(e) {
+            e.preventDefault();
+            this.isDragging = false;
+            const files = Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.xlsx') || f.name.endsWith('.xls'));
+            if (files.length > 0) {
+                this.file = files[0];
+                this.uploadFile();
+            }
+        },
+        
+        handleFileSelect(e) {
+            const files = Array.from(e.target.files).filter(f => f.name.endsWith('.xlsx') || f.name.endsWith('.xls'));
+            if (files.length > 0) {
+                this.file = files[0];
+                this.uploadFile();
+            }
+        },
+        
+        async uploadFile() {
+            if (!this.file) return;
+            
+            const currentTabData = this.tabDataStores[this.activeTab];
+            currentTabData.uploading = true;
+            currentTabData.progress = 0;
+            currentTabData.progressText = 'Dosya yukleniyor...';
+            currentTabData.errorMessages = [];
+            currentTabData.processedData = [];
+            currentTabData.currentPage = 1;
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', this.file);
+                
+                // Determine endpoint based on active tab
+                let endpoint;
+                if (this.activeTab === 'indirilecek') {
+                    endpoint = '/upload-indirilecek-excel';
+                } else if (this.activeTab === 'yuklenilen') {
+                    endpoint = '/upload-yuklenilen-excel';
+                } else {
+                    throw new Error('Bu tab için yükleme özelliði mevcut deðil');
+                }
+                
+                // Simulate progress
+                const progressInterval = setInterval(() => {
+                    if (currentTabData.progress < 90) {
+                        currentTabData.progress += Math.random() * 20;
+                        currentTabData.progressText = `Isleniyor... ${Math.round(currentTabData.progress)}%`;
+                    }
+                }, 500);
+                
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: this.getAuthHeaders(),
+                    body: formData
+                });
+                
+                clearInterval(progressInterval);
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    currentTabData.processedData = result.processed_data || [];
+                    currentTabData.errorMessages = result.error_messages || [];
+                    currentTabData.progress = 100;
+                    currentTabData.progressText = 'Islem tamamlandi';
+                    
+                    this.saveData();
+                    
+                    if (currentTabData.errorMessages.length > 0) {
+                        currentTabData.progressText = `Islem tamamlandi (${currentTabData.errorMessages.length} hata)`;
+                    }
+                } else {
+                    currentTabData.errorMessages = [result.error || 'Bilinmeyen hata'];
+                    currentTabData.progress = 0;
+                    currentTabData.progressText = 'Hata olustu';
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                currentTabData.errorMessages = ['Dosya yukleme hatasi: ' + error.message];
+                currentTabData.progress = 0;
+                currentTabData.progressText = 'Hata olustu';
+            } finally {
+                currentTabData.uploading = false;
+            }
+        },
+        
+        // Pagination - using current tab's data
+        get totalPages() {
+            const currentTabData = this.tabDataStores[this.activeTab];
+            return Math.ceil(currentTabData.processedData.length / this.itemsPerPage);
+        },
+        
+        get paginatedData() {
+            const currentTabData = this.tabDataStores[this.activeTab];
+            const start = (currentTabData.currentPage - 1) * this.itemsPerPage;
+            const end = start + this.itemsPerPage;
+            return currentTabData.processedData.slice(start, end);
+        },
+        
+        previousPage() {
+            const currentTabData = this.tabDataStores[this.activeTab];
+            if (currentTabData.currentPage > 1) {
+                currentTabData.currentPage--;
+            }
+        },
+        
+        nextPage() {
+            const currentTabData = this.tabDataStores[this.activeTab];
+            if (currentTabData.currentPage < this.totalPages) {
+                currentTabData.currentPage++;
+            }
+        },
+        
+        // Utility functions
+        formatCurrency(value) {
+            if (!value || value === 0) return '0,00';
+            return new Intl.NumberFormat('tr-TR', {
+                style: 'currency',
+                currency: 'TRY'
+            }).format(value);
+        },
+        
+        truncateText(text, maxLength = 50) {
+            if (!text) return '';
+            if (text.length <= maxLength) return text;
+            return text.substring(0, maxLength) + '...';
+        },
+        
+        async exportExcel() {
+            const currentTabData = this.tabDataStores[this.activeTab];
+            if (!currentTabData.processedData || currentTabData.processedData.length === 0) return;
+            
+            try {
+                let endpoint;
+                if (this.activeTab === 'indirilecek') {
+                    endpoint = '/export-indirilecek-excel';
+                } else if (this.activeTab === 'yuklenilen') {
+                    endpoint = '/export-yuklenilen-excel';
+                } else if (this.activeTab === 'hazir') {
+                    endpoint = '/export-karsilastirma-excel';
+                } else {
+                    throw new Error('Bu tab için export özelliği mevcut değil');
+                }
+                
+                const response = await fetch(endpoint, { headers: this.getAuthHeaders() });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    const contentDisposition = response.headers.get('content-disposition');
+                    let filename = `${this.activeTab}_kdv.xlsx`;
+                    if (contentDisposition) {
+                        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+                        if (filenameMatch) filename = filenameMatch[1];
+                    }
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    return { success: true };
+                } else if (response.status === 403) {
+                    const data = await response.json();
+                    const errorMsg = data.detail || 'Daha önce bu exceli indirdiğiniz için indirilemiyor.';
+                    alert(errorMsg);
+                    return { success: false, error: errorMsg };
+                } else {
+                    throw new Error('Excel dosyasi indirilemedi');
+                }
+            } catch (error) {
+                console.error('Export error:', error);
+                alert('Excel dosyasi indirilemedi: ' + error.message);
+                return { success: false, error: error.message };
+            }
+        },
+        
+        verileri_yukle() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const data = JSON.parse(event.target.result);
+                        this.tabDataStores = data.tabDataStores || this.tabDataStores;
+                        this.saveData();
+                        alert('Veriler yüklendi!');
+                    } catch (error) {
+                        alert('Dosya yüklenemedi: ' + error.message);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        },
+        
+        manuel_kaydet() {
+            const dataStr = JSON.stringify({ 
+                tabDataStores: this.tabDataStores
+            }, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'kdv_yedek_' + new Date().toISOString().slice(0, 10) + '.json';
+            link.click();
+            URL.revokeObjectURL(url);
+        },
+        
+        async tumVerileriTemizle() {
+            if (!confirm('Tüm verileri silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) {
+                return;
+            }
+            
+            try {
+                const sessionIds = [];
+                Object.keys(this.tabDataStores).forEach(tab => {
+                    if (this.tabDataStores[tab].sessionId) sessionIds.push(this.tabDataStores[tab].sessionId);
+                });
+                const imalatSid = localStorage.getItem('imalat_session_id');
+                if (imalatSid) sessionIds.push(imalatSid);
+                const iadeSid = localStorage.getItem('iade_session_id');
+                if (iadeSid) sessionIds.push(iadeSid);
+                const sessionToken = localStorage.getItem('session_token') || '';
+                const response = await fetch('/clear-all-data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sessionToken}`
+                    },
+                    body: JSON.stringify({ session_ids: sessionIds })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Reset all tab data stores
+                    Object.keys(this.tabDataStores).forEach(tab => {
+                        this.tabDataStores[tab] = {
+                            processedData: [],
+                            sessionId: this.generateSessionId(tab),
+                            currentPage: 1,
+                            errorMessages: [],
+                            uploading: false,
+                            progress: 0,
+                            progressText: ''
+                        };
+                    });
+                    
+                    // Clear localStorage
+                    localStorage.removeItem('yuklenenKdvData');
+                    localStorage.removeItem('karsilastirma_result');
+                    localStorage.removeItem('imalat_session_id');
+                    localStorage.removeItem('iade_session_id');
+                    
+                    // Reset UI
+                    this.file = null;
+                    this.isDragging = false;
+                    this.activeTab = 'indirilecek';
+                    
+                    // Reload page to clear all tab contents
+                    window.location.reload();
+                    
+                    alert('Tüm veriler başarıyla temizlendi!');
+                } else {
+                    alert('Veriler temizlenirken hata oluştu: ' + (result.error || 'Bilinmeyen hata'));
+                }
+            } catch (error) {
+                console.error('Clear data error:', error);
+                alert('Veriler temizlenirken hata oluştu: ' + error.message);
+            }
+        }
+    }))
+})
+</script>
+{% endblock %}
+
+{% block footer %}{% endblock %}

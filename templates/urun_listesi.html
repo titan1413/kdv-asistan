@@ -1,0 +1,556 @@
+{% extends "base.html" %}
+
+{% block title %}KDV Asistan - Ürün Listesi{% endblock %}
+
+{% block content %}
+<style>
+    /* Dark theme override for this page */
+    body {
+        background: linear-gradient(135deg, #0a1628 0%, #0e2240 45%, #0c1e3a 100%) !important;
+    }
+    /* Glass card style reused from yuklenen_kdv */
+    .glass-panel {
+        background: rgba(220, 230, 245, 0.13);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border: 1px solid rgba(210, 225, 245, 0.22);
+        border-radius: 16px;
+    }
+    .glass-btn {
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.18);
+        color: rgba(255,255,255,0.65);
+        transition: background 0.2s, border-color 0.2s, color 0.2s;
+    }
+    .glass-btn:hover {
+        background: rgba(255,255,255,0.15);
+        border-color: rgba(255,255,255,0.28);
+        color: rgba(255,255,255,0.9);
+    }
+    .accent-btn {
+        background: linear-gradient(135deg, #14b8a6, #0d9488);
+        color: #fff;
+        border: none;
+        box-shadow: 0 4px 14px rgba(20,184,166,0.35);
+        transition: transform 0.15s, box-shadow 0.2s;
+    }
+    .accent-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(20,184,166,0.45);
+    }
+    .pill-glass {
+        background: rgba(255,255,255,0.08);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.16);
+        border-radius: 9999px;
+    }
+    .pill-blue { border-color: rgba(59,130,246,0.35); color: #3b82f6; }
+    .pill-amber { border-color: rgba(245,158,11,0.35); color: #f59e0b; }
+</style>
+
+<!-- Ambient glow background (fixed, doesn't scroll) -->
+<div class="fixed inset-0 pointer-events-none" style="z-index:0; background: radial-gradient(ellipse 55% 45% at 15% 15%, rgba(59,130,246,0.09) 0%, transparent 60%), radial-gradient(ellipse 45% 40% at 85% 85%, rgba(139,92,246,0.09) 0%, transparent 60%), radial-gradient(ellipse 35% 35% at 50% 50%, rgba(20,184,166,0.05) 0%, transparent 65%);"></div>
+
+<div x-data="urunListesiApp" class="relative min-h-screen" style="z-index:1;">
+
+    <!-- Header -->
+    <div class="mb-6">
+        <div class="flex items-center justify-between flex-wrap gap-3">
+            <div class="flex items-center space-x-3">
+                <a href="/yuklenen-kdv" class="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-white/90 font-medium transition-colors flex items-center text-sm">
+                    <i class="fas fa-arrow-left mr-2"></i>Geri Dön
+                </a>
+                <div>
+                    <h1 class="text-xl font-bold text-white/90 flex items-center gap-2">
+                        <i class="fas fa-tags text-teal-400"></i>
+                        Ürün Listesi
+                    </h1>
+                    <p class="text-xs text-white/50 mt-0.5">
+                        <span x-show="mukellefAd" x-cloak class="font-semibold text-teal-400" x-text="mukellefAd"></span>
+                        <span x-show="!mukellefAd" x-cloak class="text-white/40">Mükellef seçilmedi</span>
+                        <span class="mx-1">·</span>Firma — Mal Cinsi — Ürün Kodu eşleştirme tablosu
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bilgi Kartı -->
+    <div class="glass-panel p-4 mb-6 flex items-start gap-3">
+        <i class="fas fa-lightbulb text-teal-400 mt-0.5 flex-shrink-0"></i>
+        <p class="text-sm text-white/80">
+            Bu liste, indirilecek KDV listesi yüklenirken <strong>otomatik doldurma</strong> için kullanılır.
+            Aynı firma (VKN) ve aynı mal cinsi kombinasyonu tekrar geldiğinde ürün kodu otomatik doldurulur.
+            İstediğiniz zaman buraya girip düzeltebilirsiniz.
+        </p>
+    </div>
+
+    <!-- Bildirim -->
+    <div x-show="notification.show" x-cloak x-transition
+         :class="notification.type === 'success' ? 'glass-panel border-green-600/30 text-green-400' : 'glass-panel border-red-600/30 text-red-400'"
+         class="px-4 py-3 mb-4 flex items-center gap-2 text-sm font-medium">
+        <i :class="notification.type === 'success' ? 'fas fa-check-circle text-green-500' : 'fas fa-exclamation-circle text-red-500'"></i>
+        <span x-text="notification.message"></span>
+    </div>
+
+    <!-- Loading -->
+    <div x-show="loading" x-cloak class="text-center py-16">
+        <div class="w-10 h-10 border-3 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <p class="text-white/50 text-sm">Yükleniyor…</p>
+    </div>
+
+    <!-- Mükellef Seçilmedi Uyarısı -->
+    <div x-show="!loading && !mukellefId" x-cloak class="text-center py-16">
+        <div class="w-16 h-16 glass-panel rounded-full flex items-center justify-center mx-auto mb-4">
+            <i class="fas fa-building text-white/40 text-2xl"></i>
+        </div>
+        <p class="text-white/70 font-medium mb-2">Mükellef seçilmedi</p>
+        <p class="text-white/40 text-sm mb-6">Ürün listesini görmek için önce mükellef seçin.</p>
+        <a href="/yuklenen-kdv" class="inline-flex items-center px-5 py-2.5 bg-teal-600 text-white rounded-lg text-sm font-semibold hover:bg-teal-700">
+            <i class="fas fa-arrow-left mr-2"></i>Mükellef Seçmeye Git
+        </a>
+    </div>
+
+    <!-- Ana Tablo -->
+    <div x-show="!loading && mukellefId" x-cloak class="glass-panel overflow-hidden">
+
+        <!-- Tablo Başlığı Özet -->
+        <div class="px-4 py-3 border-b border-white/10 bg-white/5">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center space-x-2">
+                    <button @click="selectAllFiltered()"
+                            class="px-3 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded font-semibold transition-colors text-xs flex items-center">
+                        <i class="fas fa-check-double mr-1.5"></i>Tümünü Seç
+                    </button>
+                    <button @click="deselectAll()"
+                            class="px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded font-semibold transition-colors text-xs flex items-center">
+                        <i class="fas fa-times mr-1.5"></i>Seçimi Kaldır
+                    </button>
+                    <button @click="deleteSelected()"
+                            :disabled="selectedCount === 0 || deleting"
+                            class="px-3 py-1 bg-red-600 hover:bg-red-700 disabled:bg-white/10 disabled:text-white/30 disabled:cursor-not-allowed text-white rounded font-semibold transition-colors text-xs flex items-center">
+                        <i class="fas fa-trash-alt mr-1.5"></i>Seçilenleri Sil
+                    </button>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <div class="bg-white/5 px-3 py-1.5 rounded border border-white/10 flex items-center space-x-2">
+                        <p class="text-xs text-white/50 font-medium">Toplam Kayıt:</p>
+                        <p class="text-sm font-bold text-white/90" x-text="items.length"></p>
+                    </div>
+                    <div class="bg-white/5 px-3 py-1.5 rounded border border-white/10 flex items-center space-x-2">
+                        <p class="text-xs text-white/50 font-medium">Seçilen:</p>
+                        <p class="text-sm font-bold text-white/90" x-text="selectedCount"></p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center justify-between">
+                <span class="text-sm font-semibold text-white/70">
+                    <i class="fas fa-list mr-1.5 text-teal-400"></i>
+                </span>
+                <input type="text" x-model="search" placeholder="Ara (unvan, cins, kod)…"
+                       class="px-3 py-1.5 text-sm border border-white/15 rounded-lg focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 w-60 bg-slate-800 text-white/90 placeholder-white/30">
+            </div>
+        </div>
+
+        <!-- Boş Durum -->
+        <div x-show="filteredItems.length === 0 && !loading" x-cloak class="text-center py-16">
+            <div class="w-14 h-14 glass-panel rounded-full flex items-center justify-center mx-auto mb-3">
+                <i class="fas fa-tags text-teal-400 text-xl"></i>
+            </div>
+            <p class="text-white/50 text-sm font-medium mb-1">
+                <span x-show="search" x-cloak>Arama sonucu bulunamadı</span>
+                <span x-show="!search" x-cloak>Henüz ürün kodu kaydı yok</span>
+            </p>
+            <p class="text-white/40 text-xs" x-show="!search" x-cloak>
+                İndirilecek KDV listesi yüklendiğinde veya aşağıdan eklenince otomatik dolacak.
+            </p>
+        </div>
+
+        <!-- Tablo -->
+        <div x-show="filteredItems.length > 0" x-cloak class="overflow-x-auto bg-white/5">
+            <table class="min-w-full" style="border-collapse:collapse;">
+                <thead class="bg-white/5 text-white/70">
+                    <tr>
+                        <th class="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide border border-white/10 w-12">Seç</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide w-10">#</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Firma Unvanı</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide w-36">Vergi No</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">Mal / Hizmet Cinsi</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide w-36">Ürün Kodu</th>
+                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide w-24">İşlem</th>
+                    </tr>
+                    <tr class="bg-white/5">
+                        <td class="px-1 py-1 border border-white/10 text-center">
+                            <input type="checkbox" @change="toggleSelectAll()" :checked="allFilteredSelected"
+                                   class="w-4 h-4 text-white/70 rounded border-white/15 focus:ring-white/20 cursor-pointer">
+                        </td>
+                        <td class="px-4 py-1 border border-white/10"></td>
+                        <td class="px-1 py-1 border border-white/10">
+                            <input type="text" x-model="filterUnvan" @input="currentPage = 1" placeholder="Ara..."
+                                   class="w-full px-1.5 py-0.5 text-xs border border-white/15 rounded bg-slate-900 text-white/90 focus:outline-none focus:ring-1 focus:ring-white/20 placeholder-white/30">
+                        </td>
+                        <td class="px-1 py-1 border border-white/10">
+                            <input type="text" x-model="filterVergiNo" @input="currentPage = 1" placeholder="Ara..."
+                                   class="w-full px-1.5 py-0.5 text-xs border border-white/15 rounded bg-slate-900 text-white/90 focus:outline-none focus:ring-1 focus:ring-white/20 placeholder-white/30">
+                        </td>
+                        <td class="px-1 py-1 border border-white/10">
+                            <input type="text" x-model="filterCins" @input="currentPage = 1" placeholder="Ara..."
+                                   class="w-full px-1.5 py-0.5 text-xs border border-white/15 rounded bg-slate-900 text-white/90 focus:outline-none focus:ring-1 focus:ring-white/20 placeholder-white/30">
+                        </td>
+                        <td class="px-1 py-1 border border-white/10">
+                            <input type="text" x-model="filterUrunKodu" @input="currentPage = 1" placeholder="Ara..."
+                                   class="w-full px-1.5 py-0.5 text-xs border border-white/15 rounded bg-slate-900 text-white/90 focus:outline-none focus:ring-1 focus:ring-white/20 placeholder-white/30">
+                        </td>
+                        <td class="px-4 py-1 border border-white/10"></td>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-white/10 bg-white/5">
+                    <template x-for="(item, idx) in paginatedItems" :key="currentPage + '-' + idx + '-' + item._id">
+                        <tr class="hover:bg-teal-500/10 transition-colors group" :class="{'bg-teal-500/20': isItemSelected(item)}">
+                            <td class="px-3 py-2 text-center border border-white/10">
+                                <input type="checkbox" :checked="isItemSelected(item)" @change="toggleItemSelection(item)"
+                                       class="w-4 h-4 text-white/70 rounded border-white/15 focus:ring-white/20 cursor-pointer">
+                            </td>
+                            <td class="px-4 py-2.5 text-xs text-white/50 border border-white/10" x-text="(currentPage - 1) * pageSize + idx + 1"></td>
+                            <td class="px-4 py-2.5 border border-white/10">
+                                <input type="text" x-model="item.unvan"
+                                       class="w-full px-2 py-1 text-sm border border-transparent group-hover:border-white/15 rounded focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 bg-transparent focus:bg-slate-900 transition-colors text-white/80 placeholder-white/30"
+                                       placeholder="Firma adı…">
+                            </td>
+                            <td class="px-4 py-2.5 border border-white/10">
+                                <input type="text" x-model="item.vergi_no"
+                                       class="w-full px-2 py-1 text-sm border border-transparent group-hover:border-white/15 rounded focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 bg-transparent focus:bg-slate-900 transition-colors font-mono text-white/80 placeholder-white/30"
+                                       placeholder="VKN/TC…">
+                            </td>
+                            <td class="px-4 py-2.5 border border-white/10">
+                                <input type="text" x-model="item.cins"
+                                       class="w-full px-2 py-1 text-sm border border-transparent group-hover:border-white/15 rounded focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 bg-transparent focus:bg-slate-900 transition-colors text-white/80 placeholder-white/30"
+                                       placeholder="Mal/hizmet cinsi…">
+                            </td>
+                            <td class="px-4 py-2.5 border border-white/10">
+                                <input type="text" x-model="item.urun_kodu"
+                                       class="w-full px-2 py-1 text-sm border border-transparent group-hover:border-teal-500/30 rounded focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 bg-transparent focus:bg-slate-900 transition-colors font-semibold text-teal-400 placeholder-white/30"
+                                       placeholder="Kod…">
+                            </td>
+                            <td class="px-4 py-2.5 text-center border border-white/10">
+                                <button @click="satirSil(item)"
+                                        class="px-2 py-1 text-xs text-red-400 hover:text-red-300 hover:bg-red-900/30 rounded transition-colors opacity-0 group-hover:opacity-100">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Tablo Alt -->
+        <div x-show="items.length > 0" x-cloak class="px-4 py-3 border-t border-white/10 bg-white/5">
+            <!-- Pagination -->
+            <div x-show="totalPages > 1" x-cloak class="mb-3 flex items-center justify-between">
+                <div class="text-sm text-white/60 font-medium">
+                    <span x-text="`Sayfa ${currentPage} / ${totalPages}`"></span>
+                    <span class="mx-2">|</span>
+                    <span x-text="`${currentPageInfo.start}-${currentPageInfo.end} arasi / ${currentPageInfo.total} kayit`"></span>
+                </div>
+                <div class="flex items-center space-x-1">
+                    <button @click="previousPage()" 
+                            :disabled="currentPage === 1"
+                            class="px-3 py-2 bg-white/10 hover:bg-white/15 disabled:bg-white/5 disabled:text-white/30 rounded-lg font-bold transition-colors text-sm">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <template x-for="pageNum in pageNumbers" :key="pageNum">
+                        <button @click="goToPage(pageNum)" 
+                                :class="pageNum === currentPage ? 'bg-teal-700 text-white' : 'bg-white/10 text-white/70 hover:bg-white/15'"
+                                class="px-3 py-2 rounded-lg font-bold transition-colors text-sm min-w-[40px]">
+                            <span x-text="pageNum"></span>
+                        </button>
+                    </template>
+                    <button @click="nextPage()" 
+                            :disabled="currentPage === totalPages"
+                            class="px-3 py-2 bg-white/10 hover:bg-white/15 disabled:bg-white/5 disabled:text-white/30 rounded-lg font-bold transition-colors text-sm">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="flex justify-end">
+                <button @click="kaydet()" :disabled="saving"
+                        class="flex items-center px-5 py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-white/10 disabled:text-white/30 text-white rounded-lg text-sm font-semibold transition-colors">
+                    <span x-show="!saving"><i class="fas fa-save mr-2"></i>Değişiklikleri Kaydet</span>
+                    <span x-show="saving"><i class="fas fa-spinner fa-spin mr-2"></i>Kaydediliyor…</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('urunListesiApp', () => ({
+        mukellefId: '',
+        mukellefAd: '',
+        items: [],
+        selectedItems: new Set(),
+        search: '',
+        filterUnvan: '',
+        filterVergiNo: '',
+        filterCins: '',
+        filterUrunKodu: '',
+        loading: true,
+        saving: false,
+        deleting: false,
+        currentPage: 1,
+        pageSize: 50,
+        notification: { show: false, type: 'success', message: '' },
+        _notifTimer: null,
+
+        init() {
+            this.mukellefId = localStorage.getItem('active_mukellef_id') || '';
+            this.mukellefAd = localStorage.getItem('active_mukellef_ad') || '';
+            if (this.mukellefId) {
+                this.loadList();
+            } else {
+                this.loading = false;
+            }
+        },
+
+        get filteredItems() {
+            let result = this.items;
+            const q = this.search.toLowerCase();
+            if (q) {
+                result = result.filter(it =>
+                    (it.unvan || '').toLowerCase().includes(q) ||
+                    (it.cins || '').toLowerCase().includes(q) ||
+                    (it.urun_kodu || '').toLowerCase().includes(q) ||
+                    (it.vergi_no || '').includes(q)
+                );
+            }
+            if (this.filterUnvan) {
+                result = result.filter(it => (it.unvan || '').toLowerCase().includes(this.filterUnvan.toLowerCase()));
+            }
+            if (this.filterVergiNo) {
+                result = result.filter(it => (it.vergi_no || '').includes(this.filterVergiNo));
+            }
+            if (this.filterCins) {
+                result = result.filter(it => (it.cins || '').toLowerCase().includes(this.filterCins.toLowerCase()));
+            }
+            if (this.filterUrunKodu) {
+                result = result.filter(it => (it.urun_kodu || '').toLowerCase().includes(this.filterUrunKodu.toLowerCase()));
+            }
+            return result;
+        },
+
+        get paginatedItems() {
+            const start = (this.currentPage - 1) * this.pageSize;
+            const end = start + this.pageSize;
+            return this.filteredItems.slice(start, end);
+        },
+
+        get totalPages() {
+            return Math.ceil(this.filteredItems.length / this.pageSize) || 1;
+        },
+
+        get pageNumbers() {
+            const pages = [];
+            const maxVisible = 5;
+            if (this.totalPages <= maxVisible) {
+                for (let i = 1; i <= this.totalPages; i++) pages.push(i);
+            } else {
+                if (this.currentPage <= 3) {
+                    for (let i = 1; i <= 4; i++) pages.push(i);
+                    pages.push('...');
+                    pages.push(this.totalPages);
+                } else if (this.currentPage >= this.totalPages - 2) {
+                    pages.push(1);
+                    pages.push('...');
+                    for (let i = this.totalPages - 3; i <= this.totalPages; i++) pages.push(i);
+                } else {
+                    pages.push(1);
+                    pages.push('...');
+                    pages.push(this.currentPage - 1);
+                    pages.push(this.currentPage);
+                    pages.push(this.currentPage + 1);
+                    pages.push('...');
+                    pages.push(this.totalPages);
+                }
+            }
+            return pages;
+        },
+
+        get currentPageInfo() {
+            const start = (this.currentPage - 1) * this.pageSize + 1;
+            const end = Math.min(start + this.pageSize - 1, this.filteredItems.length);
+            return { start, end, total: this.filteredItems.length, count: this.paginatedItems.length };
+        },
+
+        get selectedCount() {
+            return this.selectedItems.size;
+        },
+
+        get allFilteredSelected() {
+            if (this.filteredItems.length === 0) return false;
+            return this.filteredItems.every(item => this.isItemSelected(item));
+        },
+
+        getItemKey(item) {
+            return (item.vergi_no || '') + '|' + (item.cins || '');
+        },
+
+        isItemSelected(item) {
+            return this.selectedItems.has(this.getItemKey(item));
+        },
+
+        toggleItemSelection(item) {
+            const key = this.getItemKey(item);
+            if (this.selectedItems.has(key)) {
+                this.selectedItems.delete(key);
+            } else {
+                this.selectedItems.add(key);
+            }
+        },
+
+        selectAllFiltered() {
+            this.filteredItems.forEach(item => {
+                this.selectedItems.add(this.getItemKey(item));
+            });
+        },
+
+        deselectAll() {
+            this.selectedItems.clear();
+        },
+
+        toggleSelectAll() {
+            if (this.allFilteredSelected) {
+                this.deselectAll();
+            } else {
+                this.selectAllFiltered();
+            }
+        },
+
+        async deleteSelected() {
+            if (this.selectedCount === 0) return;
+            if (!confirm(`${this.selectedCount} kaydı silmek istediğinizden emin misiniz?`)) return;
+            
+            this.deleting = true;
+            try {
+                const itemsToDelete = [];
+                this.items.forEach(item => {
+                    if (this.isItemSelected(item)) {
+                        itemsToDelete.push({ vergi_no: item.vergi_no, cins: item.cins });
+                    }
+                });
+                
+                const token = localStorage.getItem('session_token') || '';
+                const r = await fetch('/api/urun-listesi/batch', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                        'X-Mukellef-Id': this.mukellefId
+                    },
+                    body: JSON.stringify({ items: itemsToDelete })
+                });
+                const d = await r.json();
+                if (d.success) {
+                    this.showNotif('success', `${d.deleted_count} kayıt başarıyla silindi.`);
+                    this.selectedItems.clear();
+                    await this.loadList();
+                } else {
+                    this.showNotif('error', d.error || 'Silme başarısız.');
+                }
+            } catch (e) {
+                this.showNotif('error', 'Silme hatası: ' + e.message);
+            } finally {
+                this.deleting = false;
+            }
+        },
+
+        previousPage() {
+            if (this.currentPage > 1) this.currentPage--;
+        },
+
+        nextPage() {
+            if (this.currentPage < this.totalPages) this.currentPage++;
+        },
+
+        goToPage(pageNum) {
+            if (pageNum !== '...') this.currentPage = pageNum;
+        },
+
+        async loadList() {
+            this.loading = true;
+            try {
+                const token = localStorage.getItem('session_token') || '';
+                const r = await fetch('/api/urun-listesi', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'X-Mukellef-Id': this.mukellefId
+                    }
+                });
+                const d = await r.json();
+                if (d.success) {
+                    this.items = (d.items || []).map((it, i) => ({ ...it, _id: i + '_' + Date.now() }));
+                    this.currentPage = 1;
+                    this.selectedItems.clear();
+                }
+            } catch (e) {
+                this.showNotif('error', 'Liste yüklenemedi: ' + e.message);
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        yeniSatirEkle() {
+            this.items.unshift({ _id: 'new_' + Date.now(), vergi_no: '', unvan: '', cins: '', urun_kodu: '' });
+            this.search = '';
+        },
+
+        satirSil(item) {
+            if (!confirm('Bu kaydı silmek istiyor musunuz?')) return;
+            this.items = this.items.filter(it => it._id !== item._id);
+        },
+
+        async kaydet() {
+            if (this.saving) return;
+            this.saving = true;
+            try {
+                const token = localStorage.getItem('session_token') || '';
+                const payload = this.items.map(({ _id, ...rest }) => rest);
+                const r = await fetch('/api/urun-listesi/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                        'X-Mukellef-Id': this.mukellefId
+                    },
+                    body: JSON.stringify({ items: payload })
+                });
+                const d = await r.json();
+                if (d.success) {
+                    let msg = `${d.count} kayıt başarıyla kaydedildi.`;
+                    if (d.synced_ind_count > 0) {
+                        msg += ` İndirilecek KDV listesinde ${d.synced_ind_count} satırın ürün kodu güncellendi.`;
+                    }
+                    this.showNotif('success', msg);
+                } else {
+                    this.showNotif('error', d.error || 'Kaydedilemedi.');
+                }
+            } catch (e) {
+                this.showNotif('error', 'Kaydetme hatası: ' + e.message);
+            } finally {
+                this.saving = false;
+            }
+        },
+
+        showNotif(type, message) {
+            clearTimeout(this._notifTimer);
+            this.notification = { show: true, type, message };
+            this._notifTimer = setTimeout(() => { this.notification.show = false; }, 4000);
+        }
+    }));
+});
+</script>
+{% endblock %}

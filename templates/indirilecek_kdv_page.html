@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KDV Asistan - İndirilecek KDV</title>
+    <link rel="stylesheet" href="/static/css/tailwind.css">
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script src="/static/js/xml-parser.js?v=8"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        [x-cloak] { display: none !important; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #0a1628 0%, #0e2240 45%, #0c1e3a 100%);
+            min-height: 100vh;
+            color: rgba(255,255,255,0.88);
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 65% 55% at 5% 5%,   rgba(59,130,246,0.16) 0%, transparent 55%),
+                radial-gradient(ellipse 50% 45% at 95% 90%, rgba(139,92,246,0.12) 0%, transparent 55%),
+                radial-gradient(ellipse 40% 40% at 50% 50%, rgba(20,184,166,0.08) 0%, transparent 65%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ── Layout ── */
+        .page-root   { position: relative; z-index: 1; }
+        .page-inner  { max-width: 1440px; margin: 0 auto; padding: 0 28px 40px; }
+
+        /* ── Top Bar ── */
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 22px 0 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            margin-bottom: 28px;
+        }
+        .topbar-left { display: flex; align-items: center; gap: 18px; }
+
+        .back-btn {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 8px 15px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            color: rgba(255,255,255,0.6);
+            font-size: 13px; font-weight: 500;
+            text-decoration: none;
+            transition: background 0.2s, color 0.2s;
+        }
+        .back-btn:hover { background: rgba(255,255,255,0.10); color: rgba(255,255,255,0.9); }
+
+        .page-eyebrow {
+            font-size: 11px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.09em;
+            color: rgba(96,165,250,0.7);
+            margin-bottom: 3px;
+        }
+        .page-heading {
+            font-size: 19px; font-weight: 700;
+            color: rgba(255,255,255,0.92);
+            line-height: 1.2;
+        }
+
+        .clear-btn {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 9px 17px;
+            background: rgba(239,68,68,0.08);
+            border: 1px solid rgba(239,68,68,0.22);
+            border-radius: 10px;
+            color: rgba(252,165,165,0.75);
+            font-size: 13px; font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s, color 0.2s;
+        }
+        .clear-btn:hover {
+            background: rgba(239,68,68,0.18);
+            border-color: rgba(239,68,68,0.42);
+            color: #fca5a5;
+        }
+
+        /* ── Section Card ── */
+        .s-card {
+            background: rgba(255,255,255,0.075);
+            border: 1px solid rgba(255,255,255,0.13);
+            border-radius: 16px;
+        }
+
+        /* ── Upload Zone ── */
+        .upload-zone {
+            border: 2px dashed rgba(255,255,255,0.17);
+            border-radius: 14px;
+            padding: 24px 32px 20px;
+            text-align: center;
+            transition: border-color 0.2s, background 0.2s;
+            position: relative;
+        }
+        .upload-zone::after {
+            content: '';
+            position: absolute; inset: 0;
+            border-radius: 14px;
+            background: radial-gradient(ellipse 70% 80% at 50% 60%, rgba(59,130,246,0.04), transparent 70%);
+            pointer-events: none;
+        }
+        .upload-zone:hover    { border-color: rgba(96,165,250,0.40); background: rgba(59,130,246,0.03); }
+        .upload-zone.dragging { border-color: rgba(96,165,250,0.65); background: rgba(59,130,246,0.08); }
+
+        .upload-icon-ring {
+            width: 68px; height: 68px;
+            background: linear-gradient(145deg, rgba(59,130,246,0.18), rgba(37,99,235,0.08));
+            border: 1px solid rgba(59,130,246,0.28);
+            border-radius: 20px;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 28px; color: #60a5fa;
+        }
+        .upload-title { font-size: 17px; font-weight: 700; color: rgba(255,255,255,0.88); margin-bottom: 8px; }
+        .upload-hint  { font-size: 13px; color: rgba(255,255,255,0.42); margin-bottom: 24px; }
+        .upload-hint span { color: rgba(96,165,250,0.7); }
+
+        .btn-upload {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 10px 26px;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            border: none; border-radius: 10px;
+            color: #fff; font-size: 13.5px; font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(59,130,246,0.30);
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+        .btn-upload:hover   { box-shadow: 0 6px 22px rgba(59,130,246,0.45); transform: translateY(-1px); }
+        .btn-upload:disabled {
+            background: rgba(255,255,255,0.08);
+            color: rgba(255,255,255,0.28);
+            box-shadow: none; transform: none; cursor: not-allowed;
+        }
+
+        /* ── Progress ── */
+        .progress-panel {
+            margin-top: 20px; padding: 16px 20px;
+            background: rgba(59,130,246,0.05);
+            border: 1px solid rgba(59,130,246,0.15);
+            border-radius: 12px;
+        }
+        .progress-track {
+            width: 100%; height: 5px;
+            background: rgba(255,255,255,0.07);
+            border-radius: 99px; overflow: hidden;
+            margin-top: 10px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #93c5fd);
+            border-radius: 99px;
+            transition: width 0.3s ease;
+        }
+
+        /* ── KPI Cards ── */
+        .kpi-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+        .kpi-card {
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 14px;
+            padding: 12px 16px;
+            position: relative; overflow: hidden;
+        }
+
+        .kpi-icon {
+            display: none;
+        }
+        .kpi-blue    .kpi-icon { background: rgba(59,130,246,0.15);  color: #60a5fa; }
+        .kpi-teal    .kpi-icon { background: rgba(20,184,166,0.15);  color: #2dd4bf; }
+        .kpi-emerald .kpi-icon { background: rgba(16,185,129,0.15);  color: #34d399; }
+        .kpi-amber   .kpi-icon { background: rgba(245,158,11,0.15);  color: #fbbf24; }
+
+        .kpi-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: rgba(255,255,255,0.50); margin-bottom: 4px; }
+        .kpi-value { font-size: 18px; font-weight: 800; line-height: 1; margin-bottom: 3px; }
+        .kpi-sub   { font-size: 10px; color: rgba(255,255,255,0.45); }
+
+        .kpi-blue    .kpi-value { color: #93c5fd; }
+        .kpi-teal    .kpi-value { color: #5eead4; }
+        .kpi-emerald .kpi-value { color: #6ee7b7; font-size: 18px; }
+        .kpi-amber   .kpi-value { color: #fcd34d; }
+
+        /* ── Alert Boxes ── */
+        .alert {
+            display: flex; align-items: flex-start; gap: 12px;
+            padding: 13px 16px; border-radius: 12px; margin-bottom: 12px;
+        }
+        .alert-orange { background: rgba(251,146,60,0.07); border: 1px solid rgba(251,146,60,0.22); }
+        .alert-red    { background: rgba(239,68,68,0.07);  border: 1px solid rgba(239,68,68,0.22);  }
+
+        /* ── Table Toolbar ── */
+        .tbl-toolbar {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 20px 14px; border-bottom: 1px solid rgba(255,255,255,0.06);
+            flex-wrap: wrap; gap: 12px;
+        }
+        .tbl-toolbar-left  { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; flex: 1; }
+        .tbl-toolbar-center { display: flex; align-items: center; justify-content: center; flex: 1; }
+        .tbl-toolbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1; justify-content: flex-end; }
+
+        .tbl-title { font-size: 14.5px; font-weight: 700; color: rgba(255,255,255,0.88); }
+
+        .warn-pill {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 10px 18px;
+            background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.40);
+            border-radius: 10px; font-size: 14px; font-weight: 700; color: #fca5a5;
+        }
+
+        .combine-lbl {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 7px 13px;
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09);
+            border-radius: 9px; font-size: 12.5px; color: rgba(255,255,255,0.68);
+            cursor: pointer; user-select: none;
+        }
+
+        .btn-excel {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 8px 16px; border-radius: 9px;
+            font-size: 12.5px; font-weight: 600; cursor: pointer;
+            transition: opacity 0.2s, transform 0.15s;
+            border: none;
+        }
+        .btn-excel:hover { opacity: 0.88; transform: translateY(-1px); }
+        .btn-excel-std { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; box-shadow: 0 3px 12px rgba(37,99,235,0.35); }
+        .btn-excel-gib { background: linear-gradient(135deg, #dc2626, #b91c1c); color: #fff; box-shadow: 0 3px 12px rgba(220,38,38,0.30); }
+
+        /* ── Data Table ── */
+        .tbl-scroll { overflow-x: auto; }
+
+        .data-tbl { width: 100%; border-collapse: collapse; }
+
+        .data-tbl thead tr {
+            background: rgba(59,130,246,0.07);
+            border-bottom: 1px solid rgba(59,130,246,0.18);
+        }
+        .data-tbl thead th {
+            padding: 10px 14px;
+            font-size: 11px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.07em;
+            color: rgba(147,197,253,0.75);
+            white-space: nowrap; text-align: left;
+        }
+        .data-tbl thead th.th-r { text-align: right; }
+
+        .data-tbl tbody tr {
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            transition: background 0.12s;
+        }
+        .data-tbl tbody tr:last-child { border-bottom: none; }
+        .data-tbl tbody tr:nth-child(even) { background: rgba(255,255,255,0.015); }
+        .data-tbl tbody tr:hover { background: rgba(59,130,246,0.06) !important; }
+
+        .data-tbl tbody td {
+            padding: 9px 14px;
+            font-size: 12.5px; color: rgba(255,255,255,0.80);
+        }
+        .data-tbl tbody td.td-r   { text-align: right; }
+        .data-tbl tbody td.td-kdv { text-align: right; font-weight: 600; color: #93c5fd; }
+
+        /* ── Pagination ── */
+        .pg-wrap {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 20px 0;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            margin-top: 4px;
+        }
+        .pg-info { font-size: 12px; color: rgba(255,255,255,0.52); }
+
+        .pg-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 32px; height: 32px; border-radius: 8px;
+            font-size: 12px; font-weight: 600; cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.05);
+            color: rgba(255,255,255,0.60);
+            transition: background 0.15s, color 0.15s;
+        }
+        .pg-btn:hover:not(:disabled) { background: rgba(255,255,255,0.10); color: #fff; }
+        .pg-btn.pg-active            { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+        .pg-btn:disabled             { opacity: 0.28; cursor: not-allowed; }
+    </style>
+</head>
+<body x-data="xmlUploadApp()" x-init="init()">
+<div class="page-root">
+<div class="page-inner">
+
+    <!-- ── Top Bar ── -->
+    <div class="topbar">
+        <div class="topbar-left">
+            <div>
+                <p class="page-eyebrow">KDV Asistan · e-Fatura</p>
+                <h1 class="page-heading">İndirilecek KDV Listesi Oluşturma</h1>
+            </div>
+        </div>
+        <button @click="tumVerileriTemizle()" class="clear-btn">
+            <i class="fas fa-trash-alt" style="font-size:11px;"></i>
+            <span>Verileri Temizle</span>
+        </button>
+    </div>
+
+    <!-- ── Upload Section ── -->
+    <div class="s-card mb-6" style="padding:20px;">
+        <div class="upload-zone"
+             :class="{'dragging': isDragging}"
+             @dragover.prevent="isDragging = true"
+             @dragleave.prevent="isDragging = false"
+             @drop.prevent="handleDrop">
+            <div class="upload-icon-ring">
+                <i class="fas fa-file-code"></i>
+            </div>
+            <p class="upload-title">XML Dosyalarınızı Yükleyin</p>
+            <p class="upload-hint">e-Fatura XML dosyalarını sürükleyin veya <span>bilgisayardan seçin</span></p>
+            <input type="file" x-ref="fileInput" multiple accept=".xml" @change="handleFileSelect" class="hidden">
+            <button @click="$refs.fileInput.click()" :disabled="uploading" class="btn-upload">
+                <span x-show="!uploading"><i class="fas fa-folder-open"></i>&nbsp; Dosya Seç</span>
+                <span x-show="uploading" x-cloak><i class="fas fa-spinner fa-spin"></i>&nbsp; İşleniyor...</span>
+            </button>
+        </div>
+
+        <!-- Progress -->
+        <div x-show="uploading" x-cloak class="progress-panel">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:13px;color:rgba(255,255,255,0.55);font-weight:500;">İşlem Süreci</span>
+                <span style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.78);" x-text="progressText"></span>
+            </div>
+            <div class="progress-track">
+                <div class="progress-fill" :style="`width:${progress}%`"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Alerts ── -->
+    <div x-show="errorFiles.length > 0" x-cloak class="alert alert-orange">
+        <i class="fas fa-times-circle" style="color:#fb923c;margin-top:1px;"></i>
+        <div>
+            <p style="font-size:13px;font-weight:700;color:#fdba74;margin-bottom:5px;">
+                Parse Hatası — <span x-text="errorFiles.length"></span> dosya işlenemedi
+            </p>
+            <template x-for="fname in errorFiles" :key="fname">
+                <p style="font-size:11.5px;color:#fb923c;font-family:monospace;" x-text="fname"></p>
+            </template>
+        </div>
+    </div>
+
+    <!-- KDV Sıfır Dosyalar -->
+    <div x-show="kdvZeroFiles.length > 0" x-cloak class="alert alert-red">
+        <i class="fas fa-times-circle" style="color:#f87171;margin-top:1px;"></i>
+        <div style="flex:1;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+                <p style="font-size:13px;font-weight:700;color:#fca5a5;margin:0;">KDV Sıfır Olanlar (<span x-text="kdvZeroFiles.length"></span>)</p>
+                <button @click="processKdvZeroFiles()" style="padding:5px 12px;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.4);border-radius:6px;color:#fca5a5;font-size:11px;font-weight:600;cursor:pointer;transition:background 0.2s;">
+                    <i class="fas fa-sync-alt" style="font-size:10px;margin-right:4px;"></i> İşle
+                </button>
+            </div>
+            <div style="max-height:200px;overflow-y:auto;">
+                <template x-for="file in kdvZeroFiles" :key="file.no">
+                    <p style="font-size:11.5px;color:#f87171;">
+                        <strong x-text="`${file.no} | ${file.vkn}`"></strong>
+                        &mdash; KDV sıfır olduğundan dolayı işlenmedi
+                    </p>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <!-- İade Dosyalar -->
+    <div x-show="iadeFiles.length > 0" x-cloak class="alert alert-orange">
+        <i class="fas fa-undo" style="color:#fb923c;margin-top:1px;"></i>
+        <div style="flex:1;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+                <p style="font-size:13px;font-weight:700;color:#fdba74;margin:0;">İade Faturalar (<span x-text="iadeFiles.length"></span>)</p>
+                <button @click="processIadeFiles()" style="padding:5px 12px;background:rgba(251,146,60,0.2);border:1px solid rgba(251,146,60,0.4);border-radius:6px;color:#fdba74;font-size:11px;font-weight:600;cursor:pointer;transition:background 0.2s;">
+                    <i class="fas fa-sync-alt" style="font-size:10px;margin-right:4px;"></i> İşle
+                </button>
+            </div>
+            <div style="max-height:200px;overflow-y:auto;">
+                <template x-for="file in iadeFiles" :key="file.no">
+                    <p style="font-size:11.5px;color:#fb923c;">
+                        <strong x-text="`${file.no} | ${file.vkn}`"></strong>
+                        &mdash; İade faturası
+                    </p>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <!-- İhrac Kayıtlı Dosyalar -->
+    <div x-show="ihracKayitliFiles.length > 0" x-cloak class="alert" style="background: rgba(59,130,246,0.07); border: 1px solid rgba(59,130,246,0.22);">
+        <i class="fas fa-globe" style="color:#60a5fa;margin-top:1px;"></i>
+        <div style="flex:1;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+                <p style="font-size:13px;font-weight:700;color:#93c5fd;margin:0;">İhrac Kayıtlı Faturalar (<span x-text="ihracKayitliFiles.length"></span>)</p>
+                <button @click="processIhracKayitliFiles()" style="padding:5px 12px;background:rgba(59,130,246,0.2);border:1px solid rgba(59,130,246,0.4);border-radius:6px;color:#93c5fd;font-size:11px;font-weight:600;cursor:pointer;transition:background 0.2s;">
+                    <i class="fas fa-sync-alt" style="font-size:10px;margin-right:4px;"></i> İşle
+                </button>
+            </div>
+            <div style="max-height:200px;overflow-y:auto;">
+                <template x-for="file in ihracKayitliFiles" :key="file.no">
+                    <p style="font-size:11.5px;color:#60a5fa;">
+                        <strong x-text="`${file.no} | ${file.vkn}`"></strong>
+                        &mdash; İhrac kayıtlı fatura
+                    </p>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <!-- İşlenemeyen Dosyalar -->
+    <div x-show="skippedFiles.length > 0" x-cloak class="alert alert-red">
+        <i class="fas fa-exclamation-triangle" style="color:#f87171;margin-top:1px;"></i>
+        <div style="flex:1;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+                <p style="font-size:13px;font-weight:700;color:#fca5a5;margin:0;">İşlenemeyen Dosyalar (<span x-text="skippedFiles.length"></span>)</p>
+                <button @click="processSkippedFiles()" style="padding:5px 12px;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.4);border-radius:6px;color:#fca5a5;font-size:11px;font-weight:600;cursor:pointer;transition:background 0.2s;">
+                    <i class="fas fa-sync-alt" style="font-size:10px;margin-right:4px;"></i> İşle
+                </button>
+            </div>
+            <div style="max-height:200px;overflow-y:auto;">
+                <template x-for="file in skippedFiles" :key="file.no">
+                    <p style="font-size:11.5px;color:#f87171;">
+                        <strong x-text="`${file.no} | ${file.vkn}`"></strong>
+                        &mdash; <span x-text="file.neden"></span>
+                    </p>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Results ── -->
+    <div x-show="processedData.length > 0" x-cloak>
+
+        <!-- KPI Row -->
+        <div class="kpi-row">
+            <div class="kpi-card kpi-blue">
+                <div class="kpi-icon"><i class="fas fa-file-code"></i></div>
+                <p class="kpi-label">İşlenen XML</p>
+                <p class="kpi-value" x-text="xmlTotal"></p>
+                <p class="kpi-sub">Fatura dosyası</p>
+            </div>
+            <div class="kpi-card kpi-teal">
+                <div class="kpi-icon"><i class="fas fa-list-ul"></i></div>
+                <p class="kpi-label">Satır Sayısı</p>
+                <p class="kpi-value" x-text="displayData.length"></p>
+                <p class="kpi-sub">Fatura kalemi</p>
+            </div>
+            <div class="kpi-card kpi-emerald">
+                <div class="kpi-icon"><i class="fas fa-receipt"></i></div>
+                <p class="kpi-label">Toplam İndirilecek KDV</p>
+                <p class="kpi-value" x-text="formatCurrency(totalKDV)"></p>
+                <p class="kpi-sub">Hesaplanan tutar</p>
+            </div>
+            <div class="kpi-card kpi-amber">
+                <div class="kpi-icon"><i class="fas fa-exclamation-circle"></i></div>
+                <p class="kpi-label">Hata / Atlanan</p>
+                <p class="kpi-value" x-text="xmlErrors + xmlSkipped"></p>
+                <p class="kpi-sub">Kontrol gerektiren</p>
+            </div>
+        </div>
+
+        <!-- Table Card -->
+        <div class="s-card">
+            <!-- Toolbar -->
+            <div class="tbl-toolbar">
+                <div class="tbl-toolbar-left">
+                    <span class="tbl-title">İşlem Sonuçları</span>
+                </div>
+                <div class="tbl-toolbar-center">
+                    <span class="warn-pill">
+                        <i class="fas fa-exclamation-triangle" style="font-size:14px;"></i>
+                        İptal / Red faturalarını kontrol edin
+                    </span>
+                </div>
+                <div class="tbl-toolbar-right">
+                    <label class="combine-lbl">
+                        <input type="checkbox" x-model="combineRows" style="width:15px;height:15px;">
+                        <span>Satırları Birleştir</span>
+                    </label>
+                    <button @click="exportExcel('standart')" class="btn-excel btn-excel-std">
+                        <i class="fas fa-file-excel" style="font-size:11px;"></i> Standart Excel
+                    </button>
+                    <button @click="exportExcel('gib_sartli')" class="btn-excel btn-excel-gib">
+                        <i class="fas fa-file-excel" style="font-size:11px;"></i> GİB Şartlı Excel
+                    </button>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="tbl-scroll">
+                <table class="data-tbl">
+                    <thead>
+                        <tr>
+                            <th>VKN / TCKN</th>
+                            <th>Ünvan</th>
+                            <th>Tarih</th>
+                            <th>Fatura No</th>
+                            <th>Cins</th>
+                            <th>Miktar</th>
+                            <th class="th-r">Matrah</th>
+                            <th class="th-r">KDV</th>
+                            <th class="th-r">Tevkifat</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="(item, index) in paginatedData" :key="currentPage + '-' + index + '-' + item.no + '-' + item.vkn + '-' + item.cins">
+                            <tr>
+                                <td x-text="truncateText(item.vkn, 30)"   :title="item.vkn"></td>
+                                <td x-text="truncateText(item.unvan, 40)" :title="item.unvan"></td>
+                                <td x-text="truncateText(item.tarih, 15)" :title="item.tarih"></td>
+                                <td x-text="truncateText(item.no, 25)"    :title="item.no"></td>
+                                <td x-text="truncateText(item.cins, 50)"  :title="item.cins"></td>
+                                <td x-text="truncateText(item.miktar, 20)" :title="item.miktar"></td>
+                                <td class="td-r"   x-text="truncateText(formatCurrency(item.matrah), 20)"        :title="formatCurrency(item.matrah)"></td>
+                                <td class="td-kdv" x-text="truncateText(formatCurrency(item.kdv), 20)"           :title="formatCurrency(item.kdv)"></td>
+                                <td class="td-r"   x-text="truncateText(formatCurrency(item.tevkifat || 0), 20)" :title="formatCurrency(item.tevkifat || 0)"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div x-show="totalPages > 1" x-cloak class="pg-wrap">
+                <p class="pg-info">
+                    Sayfa <span x-text="currentPage"></span> / <span x-text="totalPages"></span>
+                    &nbsp;·&nbsp;
+                    <span x-text="currentPageInfo.start"></span>–<span x-text="currentPageInfo.end"></span>
+                    &nbsp;/&nbsp; <span x-text="currentPageInfo.total"></span> kayıt
+                </p>
+                <div style="display:flex;align-items:center;gap:5px;">
+                    <button @click="previousPage()" :disabled="currentPage === 1" class="pg-btn">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <template x-for="pageNum in pageNumbers" :key="pageNum">
+                        <button @click="goToPage(pageNum)"
+                                :class="pageNum === currentPage ? 'pg-active' : ''"
+                                class="pg-btn"
+                                x-text="pageNum">
+                        </button>
+                    </template>
+                    <button @click="nextPage()" :disabled="currentPage === totalPages" class="pg-btn">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+</div>
+
+    <script>
+    function xmlUploadApp() {
+        return {
+            files: [],
+            uploading: false,
+            progress: 0,
+            progressText: '',
+            processedData: [],
+            originalProcessedData: [],
+            skippedFiles: [],
+            kdvZeroFiles: [],
+            iadeFiles: [],
+            ihracKayitliFiles: [],
+            errorFiles: [],
+            sessionId: '',
+            xmlTotal: 0,
+            xmlProcessed: 0,
+            xmlSkipped: 0,
+            xmlErrors: 0,
+            combineRows: false,
+            currentPage: 1,
+            itemsPerPage: 50,
+            isDragging: false,
+
+            generateXmlId() {
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+                let result = '';
+                for (let i = 0; i < 8; i++) {
+                    result += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                return result;
+            },
+            
+            init() {
+                this.watchCombineRows();
+            },
+
+            tumVerileriTemizle() {
+                if (confirm('Tum verileri temizlemek istediginize emin misiniz?')) {
+                    this.files = [];
+                    this.processedData = [];
+                    this.originalProcessedData = [];
+                    this.skippedFiles = [];
+                    this.errorFiles = [];
+                    this.sessionId = '';
+                    this.progress = 0;
+                    this.progressText = '';
+                    this.currentPage = 1;
+                    this.xmlTotal = 0;
+                    this.xmlProcessed = 0;
+                    this.xmlSkipped = 0;
+                    this.xmlErrors = 0;
+                }
+            },
+
+            processKdvZeroFiles() {
+                // Find and mark items in processedData
+                this.processedData.forEach(item => {
+                    if (parseFloat(item.kdv || 0) === 0) {
+                        item.manuallyProcessed = true;
+                    }
+                });
+                this.kdvZeroFiles = [];
+            },
+
+            processIadeFiles() {
+                this.processedData.forEach(item => {
+                    if (item.neden && item.neden.includes('İADE')) {
+                        item.manuallyProcessed = true;
+                    }
+                });
+                this.iadeFiles = [];
+            },
+
+            processIhracKayitliFiles() {
+                this.processedData.forEach(item => {
+                    if (item.neden && item.neden.includes('İHRAÇ')) {
+                        item.manuallyProcessed = true;
+                    }
+                });
+                this.ihracKayitliFiles = [];
+            },
+
+            processSkippedFiles() {
+                this.processedData.forEach(item => {
+                    if (item.durum === 'ATLANDI') {
+                        item.manuallyProcessed = true;
+                    }
+                });
+                this.skippedFiles = [];
+            },
+
+            
+            handleDrop(e) {
+                this.isDragging = false;
+                this.files = Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.xml'));
+                if (this.files.length > 0) {
+                    this.uploadFiles();
+                }
+            },
+            
+            handleFileSelect(e) {
+                this.files = Array.from(e.target.files).filter(f => f.name.endsWith('.xml'));
+                if (this.files.length > 0) {
+                    this.uploadFiles();
+                }
+            },
+            
+            formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            },
+            
+            async uploadFiles() {
+                if (this.files.length === 0) return;
+
+                this.uploading = true;
+                this.progress = 0;
+                this.errorFiles = [];
+                this.progressText = 'XML dosyaları tarayıcıda işleniyor...';
+
+                try {
+                    const parser = new GIBXMLParser();
+                    const allProcessedData = [];
+                    let xmlTotal = 0;
+                    let xmlProcessed = 0;
+                    let xmlSkipped = 0;
+                    let xmlErrors = 0;
+
+                    // Process each XML file in browser
+                    for (let i = 0; i < this.files.length; i++) {
+                        const file = this.files[i];
+                        const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
+                        this.progressText = `XML işleniyor: ${i + 1}/${this.files.length} — ${file.name} (${fileSizeMB} MB)`;
+                        this.progress = Math.round((i / this.files.length) * 50);
+                        // UI'nın progress güncellemesini render etmesi için nefes al
+                        await new Promise(r => setTimeout(r, 0));
+
+                        try {
+                            const xmlString = await file.text();
+                            const result = parser.parseXML(xmlString, file.name);
+
+                            xmlTotal++;
+                            const xmlId = this.generateXmlId();
+
+                            if (result === null) {
+                                xmlErrors++;
+                                this.errorFiles.push(file.name);
+                            } else if (Array.isArray(result)) {
+                                result.forEach(item => { item.xml_no = xmlId; });
+                                allProcessedData.push(...result);
+                                xmlProcessed++;
+                            } else if (result.durum === 'ATLANDI') {
+                                allProcessedData.push(result);
+                                xmlSkipped++;
+                            } else {
+                                xmlErrors++;
+                                this.errorFiles.push(file.name);
+                            }
+                        } catch (error) {
+                            console.error(`Error processing ${file.name}:`, error);
+                            xmlTotal++;
+                            xmlErrors++;
+                            this.errorFiles.push(file.name);
+                        }
+                    }
+
+                    this.progressText = 'JSON verisi sunucuya gönderiliyor...';
+                    this.progress = 75;
+
+                    // Send parsed JSON data to server
+                    const _xmlToken = localStorage.getItem('session_token') || '';
+                    const _mukId = localStorage.getItem('active_mukellef_id') || '';
+                    const _dId = localStorage.getItem('active_donem_id') || '';
+                    const headers = {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${_xmlToken}`
+                    };
+                    if (_mukId) headers['X-Mukellef-Id'] = _mukId;
+                    if (_dId) headers['X-Donem-Id'] = _dId;
+
+                    const response = await fetch('/upload-json-data', {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify({
+                            processed_data: allProcessedData,
+                            xml_total: xmlTotal,
+                            xml_processed: xmlProcessed,
+                            xml_skipped: xmlSkipped,
+                            xml_errors: xmlErrors
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        this.sessionId = result.session_id;
+                        this.xmlTotal = result.xml_total || 0;
+                        this.xmlProcessed = result.xml_processed || 0;
+                        this.xmlSkipped = result.xml_skipped || 0;
+                        this.xmlErrors = result.xml_errors || 0;
+                        // Save original data as deep copy
+                        const filteredData = result.processed_data.filter(item => item.vkn && item.unvan);
+                        this.originalProcessedData = JSON.parse(JSON.stringify(filteredData));
+                        this.processedData = JSON.parse(JSON.stringify(filteredData));
+                        this.skippedFiles = result.processed_data.filter(item => item.durum === 'ATLANDI' && !item.neden.includes('İADE') && !item.neden.includes('İHRAÇ'));
+                        // Mark KDV zero items
+                        this.kdvZeroFiles = this.processedData.filter(item => parseFloat(item.kdv || 0) === 0);
+                        // Mark iade items
+                        this.iadeFiles = result.processed_data.filter(item => item.neden && item.neden.includes('İADE'));
+                        // Mark ihrac kayitli items
+                        this.ihracKayitliFiles = result.processed_data.filter(item => item.neden && item.neden.includes('İHRAÇ'));
+                        const filteredCount = this.processedData.length;
+                        this.progress = 100;
+                        this.progressText = `Yüklenen: ${this.xmlTotal} XML, Listelenen: ${filteredCount} satır`;
+                    }
+                } catch (error) {
+                    console.error('Upload error:', error);
+                    alert('Dosya işleme hatası: ' + error.message);
+                } finally {
+                    this.uploading = false;
+                }
+            },
+            
+            get displayData() {
+                if (!this.combineRows) {
+                    // Convert miktar to string for proper display, exclude KDV zero and special status items unless manually processed
+                    return this.processedData
+                        .filter(item => {
+                            const kdv = parseFloat(item.kdv || 0);
+                            const isKdvZero = kdv === 0;
+                            const isIade = item.durum === 'İADE';
+                            const isIhrac = item.durum === 'İHRAC_KAYITLI';
+                            const isAtlandi = item.durum === 'ATLANDI';
+                            const isManuallyProcessed = item.manuallyProcessed === true;
+                            // Allow if manually processed, otherwise filter out
+                            if (isManuallyProcessed) return true;
+                            return !isKdvZero && !isIade && !isIhrac && !isAtlandi;
+                        })
+                        .map(item => ({
+                            ...item,
+                            miktar: String(item.miktar || '')
+                        }));
+                }
+                
+                // Combine rows by invoice number
+                const grouped = {};
+                this.processedData.forEach(item => {
+                    const key = `${item.no}_${item.tarih}_${item.vkn}`;
+                    if (!grouped[key]) {
+                        grouped[key] = {
+                            vkn: String(item.vkn || ''),
+                            unvan: String(item.unvan || ''),
+                            tarih: String(item.tarih || ''),
+                            no: String(item.no || ''),
+                            cins: [],
+                            miktar: [],
+                            matrah: 0,
+                            kdv: 0,
+                            tevkifat: 0,
+                            manuallyProcessed: false,
+                            hasIade: false,
+                            hasIhrac: false,
+                            hasAtlandi: false
+                        };
+                    }
+                    grouped[key].cins.push(String(item.cins || ''));
+                    grouped[key].miktar.push(String(item.miktar || ''));
+                    grouped[key].matrah += parseFloat(item.matrah) || 0;
+                    grouped[key].kdv += parseFloat(item.kdv) || 0;
+                    grouped[key].tevkifat += parseFloat(item.tevkifat) || 0;
+                    // Mark as manually processed if any item in the group is
+                    if (item.manuallyProcessed) {
+                        grouped[key].manuallyProcessed = true;
+                    }
+                    // Track special statuses during grouping
+                    if (item.durum === 'İADE') grouped[key].hasIade = true;
+                    if (item.durum === 'İHRAC_KAYITLI') grouped[key].hasIhrac = true;
+                    if (item.durum === 'ATLANDI') grouped[key].hasAtlandi = true;
+                });
+                
+                return Object.values(grouped)
+                    .filter(item => {
+                        // Allow if manually processed, regardless of status
+                        if (item.manuallyProcessed) return true;
+                        const kdv = parseFloat(item.kdv || 0);
+                        return !item.hasIade && !item.hasIhrac && !item.hasAtlandi && kdv !== 0;
+                    })
+                    .map(item => ({
+                        vkn: item.vkn,
+                        unvan: item.unvan,
+                        tarih: item.tarih,
+                        no: item.no,
+                        cins: item.cins.join(' - '),
+                        miktar: item.miktar.join(' - '),
+                        matrah: item.matrah.toFixed(2),
+                        kdv: item.kdv.toFixed(2),
+                        tevkifat: item.tevkifat.toFixed(2)
+                    }));
+            },
+            
+            get totalKDV() {
+                return this.displayData.reduce((sum, item) => sum + parseFloat(item.kdv || 0), 0);
+            },
+            
+            get totalPages() {
+                return Math.ceil(this.displayData.length / this.itemsPerPage);
+            },
+            
+            get paginatedData() {
+                const start = (this.currentPage - 1) * this.itemsPerPage;
+                const end = Math.min(start + this.itemsPerPage, this.displayData.length);
+                return this.displayData.slice(start, end);
+            },
+            
+            get currentPageInfo() {
+                const start = (this.currentPage - 1) * this.itemsPerPage + 1;
+                const end = Math.min(this.currentPage * this.itemsPerPage, this.displayData.length);
+                const count = end - start + 1;
+                return { start, end, count, total: this.displayData.length };
+            },
+            
+            get pageNumbers() {
+                const pages = [];
+                const maxVisible = 5;
+                let start = Math.max(1, this.currentPage - Math.floor(maxVisible / 2));
+                let end = Math.min(this.totalPages, start + maxVisible - 1);
+                
+                if (end - start + 1 < maxVisible) {
+                    start = Math.max(1, end - maxVisible + 1);
+                }
+                
+                for (let i = start; i <= end; i++) {
+                    pages.push(i);
+                }
+                return pages;
+            },
+            
+            goToPage(page) {
+                if (page >= 1 && page <= this.totalPages) {
+                    this.currentPage = page;
+                }
+            },
+            
+            previousPage() {
+                if (this.currentPage > 1) {
+                    this.currentPage--;
+                }
+            },
+            
+            nextPage() {
+                if (this.currentPage < this.totalPages) {
+                    this.currentPage++;
+                }
+            },
+            
+            formatCurrency(value) {
+                return new Intl.NumberFormat('tr-TR', {
+                    style: 'currency',
+                    currency: 'TRY'
+                }).format(value);
+            },
+            
+            truncateText(text, maxLength = 30) {
+                if (text.length <= maxLength) return text;
+                return text.substring(0, maxLength) + '...';
+            },
+            
+            watchCombineRows() {
+                this.$watch('combineRows', (newVal, oldVal) => {
+                    if (newVal !== oldVal) {
+                        // Save manually processed flags before reset
+                        const manuallyProcessedKeys = new Set();
+                        this.processedData.forEach(item => {
+                            if (item.manuallyProcessed) {
+                                manuallyProcessedKeys.add(`${item.no}_${item.tarih}_${item.vkn}`);
+                            }
+                        });
+                        
+                        // Mod degistiginde processedData'yı original ile senkronize et
+                        if (this.originalProcessedData.length > 0) {
+                            this.processedData = JSON.parse(JSON.stringify(this.originalProcessedData));
+                        }
+                        
+                        // Restore manually processed flags
+                        this.processedData.forEach(item => {
+                            const key = `${item.no}_${item.tarih}_${item.vkn}`;
+                            if (manuallyProcessedKeys.has(key)) {
+                                item.manuallyProcessed = true;
+                            }
+                        });
+                        
+                        // Sayfa numarasını sıfırla
+                        this.currentPage = 1;
+                        // Mod degistiginde indirme haklarini sifirla
+                        this.resetDownloadLimits();
+                    }
+                });
+            },
+            
+            async resetDownloadLimits() {
+                if (!this.sessionId) return;
+                
+                try {
+                    const _rlToken = localStorage.getItem('session_token') || '';
+                    await fetch(`/reset-download-limits?session_id=${this.sessionId}`, {
+                        headers: { 'Authorization': `Bearer ${_rlToken}` }
+                    });
+                } catch (error) {
+                    console.error('Reset limits error:', error);
+                }
+            },
+            
+            canDownload(type) {
+                // Indirme hakki kontrolu - backend de kontrol ediyor, bu UI icin
+                return true;
+            },
+            
+            async exportExcel(type) {
+                if (!this.sessionId) return;
+                
+                try {
+                    const _expToken = localStorage.getItem('session_token') || '';
+                    // Collect manually processed item keys
+                    const manuallyProcessedKeys = [];
+                    this.processedData.forEach(item => {
+                        if (item.manuallyProcessed) {
+                            manuallyProcessedKeys.push(`${item.no}_${item.tarih}_${item.vkn}`);
+                        }
+                    });
+                    
+                    const response = await fetch(`/export-excel?session_id=${this.sessionId}&export_type=${type}&combine_rows=${this.combineRows}&manually_processed=${encodeURIComponent(JSON.stringify(manuallyProcessedKeys))}`, {
+                        headers: { 'Authorization': `Bearer ${_expToken}` }
+                    });
+                    
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = response.headers.get('content-disposition')?.split('filename=')[1]?.replace(/"/g, '') || `kdv_listesi_${type}.xlsx`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                    } else if (response.status === 403) {
+                        const data = await response.json();
+                        alert(data.detail || 'Indirme hakkiniz kalmadi!');
+                    } else {
+                        const data = await response.json();
+                        alert('Excel dosyasi indirilemedi: ' + (data.detail || 'Bilinmeyen hata'));
+                    }
+                } catch (error) {
+                    console.error('Export error:', error);
+                    alert('Excel dosyasi indirilemedi: ' + error.message);
+                }
+            }
+        }
+    }
+    </script>
+</body>
+</html>

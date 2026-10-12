@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block title %}Kayıt Ol — KDV Asistan{% endblock %}
+
+{% block navigation %}{% endblock %}
+
+{% block scripts %}
+<style>
+:root { --blue:#0055ff; --blue-d:#003ecc; --ink:#0c0c0c; }
+body { font-family:'Segoe UI',system-ui,sans-serif; }
+.input-field {
+    width:100%; padding:12px 14px; border:1.5px solid #e5e7eb;
+    border-radius:10px; outline:none; font-size:14px;
+    transition:border-color .2s, box-shadow .2s; background:#fff;
+}
+.input-field:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(0,85,255,.1); }
+.btn-primary {
+    width:100%; background:var(--blue); color:#fff; font-weight:800;
+    padding:14px; border-radius:12px; border:none; cursor:pointer;
+    font-size:14px; letter-spacing:.04em; text-transform:uppercase;
+    transition:background .2s, transform .15s;
+}
+.btn-primary:hover { background:var(--blue-d); transform:translateY(-1px); }
+.perk { display:flex; align-items:flex-start; gap:12px; }
+.perk-icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+html, body { height:100%; overflow:hidden; }
+</style>
+<script src="/api/client-config.js"></script>
+<script src="/KDV_Web/js/auth.js"></script>
+<script>
+function togglePw() {
+    const f = document.getElementById('regPassword');
+    const eye = document.getElementById('pwEye');
+    if (f.type === 'password') { f.type = 'text'; eye.classList.replace('fa-eye','fa-eye-slash'); }
+    else { f.type = 'password'; eye.classList.replace('fa-eye-slash','fa-eye'); }
+}
+async function openContract(type) {
+    const modal = document.getElementById('contractModal');
+    const title = document.getElementById('modalTitle');
+    const content = document.getElementById('modalContent');
+    title.textContent = type === 'kvkk' ? 'KVKK Aydınlatma Metni' : 'Kullanım Koşulları';
+    content.innerHTML = '<p class="text-slate-400 text-center py-4">Yükleniyor...</p>';
+    modal.classList.remove('hidden');
+    try {
+        const file = type === 'kvkk' ? '/KDV_Web/kvkk.txt' : '/KDV_Web/sozlesme.txt';
+        const res = await fetch(file);
+        const text = await res.text();
+        content.innerHTML = '<pre class="whitespace-pre-wrap text-xs leading-relaxed">' + text + '</pre>';
+    } catch (e) {
+        content.innerHTML = '<p class="text-red-500 text-center py-4">İçerik yüklenemedi.</p>';
+    }
+}
+function closeContractModal() {
+    document.getElementById('contractModal').classList.add('hidden');
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="-mx-4 sm:-mx-6 lg:-mx-8 -my-4 h-screen flex flex-col">
+
+  <!-- TOP BAR -->
+  <div class="bg-white/90 backdrop-blur border-b border-slate-100">
+    <div class="w-full px-6 h-14 flex items-center justify-between">
+      <a href="/">
+        <img src="/static/images/logo.png" alt="KDV Asistan" class="h-12 object-contain">
+      </a>
+      <a href="/login" class="text-sm text-slate-500 hover:text-slate-800 font-semibold transition flex items-center gap-1.5">
+        <i class="fas fa-sign-in-alt text-xs"></i> Zaten hesabınız var mı? Giriş yapın
+      </a>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="flex-1 min-h-0 grid md:grid-cols-2 overflow-hidden">
+
+    <!-- LEFT: Tanıtım paneli -->
+    <div class="hidden md:flex flex-col justify-center px-12 xl:px-20 py-8 overflow-y-auto" style="background:var(--ink)">
+      <div class="max-w-md">
+        <div class="mb-10">
+          <div class="inline-block text-[11px] font-black text-blue-300 uppercase tracking-widest bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-full mb-6">30 Günlük Ücretsiz Denememe için iletişime geçin</div>
+          <h1 class="text-3xl xl:text-4xl font-black text-white leading-tight tracking-tight">
+            KDV İadenizi<br><span style="color:var(--blue)">Saniyeler</span> <br>İçinde Hazırlayın
+          </h1>
+        </div>
+
+        <div class="space-y-6 mb-12">
+          <div class="perk">
+            <div class="perk-icon" style="background:rgba(0,85,255,.15)"><i class="fas fa-bolt text-blue-400 text-sm"></i></div>
+            <div><p class="text-white font-bold text-sm mb-1">Anında Liste Oluşturma</p><p class="text-slate-400 text-sm leading-relaxed">Yüzlerce XML dosyası 30 saniyeden kısa sürede GİB uyumlu Excel listesine dönüşür.</p></div>
+          </div>
+          <div class="perk">
+            <div class="perk-icon" style="background:rgba(0,196,125,.12)"><i class="fas fa-shield-alt text-emerald-400 text-sm"></i></div>
+            <div><p class="text-white font-bold text-sm mb-1">GKS Hatası Sıfır</p><p class="text-slate-400 text-sm leading-relaxed">GKS09, GKS17, GKS24 hataları sisteme gönderilmeden, mimari düzeyde engellenir.</p></div>
+          </div>
+          <div class="perk">
+            <div class="perk-icon" style="background:rgba(251,146,60,.12)"><i class="fas fa-layer-group text-orange-400 text-sm"></i></div>
+            <div><p class="text-white font-bold text-sm mb-1">Otomatik Stok Takibi</p><p class="text-slate-400 text-sm leading-relaxed">Geçmiş dönem listeleriyle stok bakiyesi otomatik hesaplanır.</p></div>
+          </div>
+          <div class="perk">
+            <div class="perk-icon" style="background:rgba(99,102,241,.12)"><i class="fas fa-lock text-indigo-400 text-sm"></i></div>
+            <div><p class="text-white font-bold text-sm mb-1">Güvenli &amp; KVKK Uyumlu</p><p class="text-slate-400 text-sm leading-relaxed">SSL şifreli altyapı, verileriniz üçüncü taraflarla paylaşılmaz.</p></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- RIGHT: Form paneli -->
+    <div class="flex flex-col justify-center px-6 md:px-12 xl:px-20 py-8 overflow-y-auto" style="background:#f9fafb">
+      <div class="w-full max-w-md mx-auto">
+
+        <!-- Kayıt Formu -->
+        <div id="formWrap">
+          <h2 class="text-2xl font-black text-[var(--ink)] mb-1">Hesap Oluşturun</h2>
+          <p class="text-slate-500 text-sm mb-8"> 
+          <form id="registerForm" class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Ünvan / Ad Soyad</label>
+              <input type="text" id="regFullName" maxlength="100" required class="input-field" placeholder="Örn: MEHMET ÖNDER">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Telefon</label>
+              <input type="tel" id="regPhone" maxlength="15" required class="input-field" placeholder="05XX XXX XX XX">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">E-posta</label>
+              <input type="email" id="regEmail" maxlength="50" required class="input-field" placeholder="ornek@eposta.com">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Şifre</label>
+              <div class="relative">
+                <input type="password" id="regPassword" maxlength="20" required class="input-field pr-12" placeholder="••••••••">
+                <span onclick="togglePw()" class="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer text-slate-400 hover:text-[var(--blue)] transition">
+                  <i class="fas fa-eye" id="pwEye"></i>
+                </span>
+              </div>
+            </div>
+            <div class="flex items-start gap-2.5 pt-1">
+              <input type="checkbox" id="termsCheck" class="w-4 h-4 mt-0.5 text-blue-600 rounded shrink-0">
+              <label for="termsCheck" class="text-xs text-slate-500 leading-relaxed">
+                <a href="javascript:void(0)" onclick="openContract('membership')" class="text-[var(--blue)] underline font-semibold">Kullanım Koşullarını</a> ve <a href="javascript:void(0)" onclick="openContract('kvkk')" class="text-[var(--blue)] underline font-semibold">KVKK Metnini</a> okudum, onaylıyorum.
+              </label>
+            </div>
+            <button type="submit" id="submitBtn" class="btn-primary mt-2">Kayıt Ol ve Başla</button>
+          </form>
+
+          <p id="formMessage" class="text-sm mt-4 text-center font-bold text-[var(--blue)] min-h-[18px]"></p>
+
+          <p class="text-center text-xs text-slate-400 mt-5">
+            Hesabınız var mı? <a href="/login" class="text-[var(--blue)] underline font-semibold">Giriş yapın</a>
+          </p>
+        </div>
+
+        <!-- OTP Doğrulama -->
+        <div id="otpArea" class="hidden">
+          <div class="text-center mb-8">
+            <div class="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
+              <i class="fas fa-envelope-open text-[var(--blue)] text-2xl"></i>
+            </div>
+            <h2 class="text-2xl font-black text-[var(--ink)] mb-2">E-posta Doğrulama</h2>
+            <p class="text-slate-500 text-sm">6 haneli kodu giriniz.</p>
+          </div>
+          <input type="text" id="verifyCode" maxlength="6"
+            class="w-full p-4 text-center text-4xl tracking-[0.4em] border-2 border-[var(--blue)] rounded-2xl font-black text-[var(--blue)] bg-blue-50 outline-none mb-4"
+            placeholder="000000">
+          <button id="verifyBtn" class="btn-primary mb-4" style="background:var(--ink)">Kodu Doğrula</button>
+          <div class="text-center">
+            <p id="timerText" class="text-xs text-slate-500">Tekrar gönder: <span id="seconds" class="text-[var(--blue)] font-bold">60</span>s</p>
+            <button id="resendBtn" type="button" class="hidden text-xs font-bold text-[var(--blue)] underline">Yeniden Gönder</button>
+          </div>
+        </div>
+
+        <!-- Dashboard (giriş yapılmış durum) -->
+        <div id="userDashboard" class="hidden">
+          <h2 class="text-2xl font-black text-[var(--ink)] mb-6">Hoş Geldiniz 👋</h2>
+          <div class="bg-white border border-slate-200 rounded-2xl p-6 mb-4">
+            <div class="flex justify-between items-start mb-4">
+              <div><p class="font-bold text-[var(--ink)]" id="userName">Kullanıcı</p><p class="text-xs text-slate-400" id="userEmailLabel"></p></div>
+              <button onclick="logout()" class="text-red-500 text-xs font-bold border border-red-100 px-3 py-1.5 rounded-lg hover:bg-red-50 transition">Çıkış</button>
+            </div>
+            <div class="space-y-2 text-sm border-t border-slate-100 pt-4">
+              <div class="flex justify-between"><span class="text-slate-500">Durum:</span><span id="licenseStatus" class="font-bold text-emerald-600">Kontrol...</span></div>
+              <div class="flex justify-between"><span class="text-slate-500">Paket:</span><span id="licenseType" class="font-bold">-</span></div>
+              <div class="flex justify-between"><span class="text-slate-500">Kalan Süre:</span><span id="daysLeft" class="font-bold text-[var(--blue)]">-</span></div>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <input type="password" id="newPassword" placeholder="Yeni Şifre" class="flex-1 p-2.5 text-sm border border-slate-200 rounded-xl outline-none focus:border-[var(--blue)] transition">
+            <button onclick="updatePassword()" class="bg-slate-100 hover:bg-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold transition">Güncelle</button>
+          </div>
+          <p id="passMessage" class="text-xs mt-2 text-slate-500 text-center"></p>
+        </div>
+
+        <!-- Başarılı kayıt sonrası -->
+        <div id="afterDownloadTexts" class="hidden text-center">
+          <div class="w-20 h-20 bg-emerald-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
+            <i class="fas fa-check-circle text-emerald-500 text-4xl"></i>
+          </div>
+          <h2 class="text-2xl font-black text-[var(--ink)] mb-3">Kaydınız Alındı!</h2>
+          <p class="text-slate-500 text-sm leading-relaxed mb-8 max-w-sm mx-auto">Hesabınız inceleme sürecinde. Aktivasyon tamamlandığında e-posta ile bilgilendirileceksiniz.</p>
+          <a href="/login" class="flex items-center justify-center gap-2 text-white font-bold py-4 rounded-xl hover:-translate-y-0.5 transition shadow-lg text-sm" style="background:var(--blue)">
+            <i class="fas fa-sign-in-alt"></i> Giriş Sayfasına Git
+          </a>
+          <a href="/" class="block text-center text-sm text-slate-400 hover:text-[var(--blue)] mt-4 transition underline">Ana Sayfaya Dön</a>
+        </div>
+
+        <!-- auth.js tarafından kullanılan gizli alanlar -->
+        <div id="registerTexts" class="hidden"></div>
+        <table class="hidden"><tbody id="deviceTableBody"></tbody></table>
+        <input type="password" id="oldPassword" class="hidden">
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Sözleşme Modal -->
+<div id="contractModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[70vh] flex flex-col">
+    <div class="p-5 border-b flex justify-between items-center">
+      <h3 id="modalTitle" class="font-bold text-[var(--ink)]">Sözleşme</h3>
+      <button onclick="closeContractModal()" class="text-slate-400 hover:text-slate-700 text-2xl leading-none">&times;</button>
+    </div>
+    <div id="modalContent" class="p-6 overflow-y-auto text-sm text-slate-600 leading-relaxed flex-1"></div>
+    <div class="p-4 border-t text-center">
+      <button onclick="closeContractModal()" class="text-white font-bold px-6 py-2 rounded-lg transition text-sm" style="background:var(--blue)">Anladım</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block footer %}{% endblock %}

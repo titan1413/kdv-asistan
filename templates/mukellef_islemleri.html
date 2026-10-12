@@ -1,0 +1,404 @@
+{% extends "base_simple.html" %}
+{% block title %}KDV Asistan - Mükellef İşlemleri{% endblock %}
+{% block content %}
+<style>
+    button {
+        display: inline-block !important;
+        visibility: visible !important;
+        opacity: 1 !important;  
+        position: relative !important;
+        z-index: 1 !important;
+    }
+    .btn-visible {
+        background-color: #059669 !important;
+        color: white !important;
+        border: none !important;
+    }
+    .btn-cancel {
+        background-color: #e2e8f0 !important;
+        color: #334155 !important;
+        border: none !important;
+    }
+    .btn-delete {
+        background-color: #dc2626 !important;
+        color: white !important;
+        border: none !important;
+    }
+    [x-cloak] {
+        display: none !important;
+    }
+    body {
+        background: linear-gradient(135deg, #0a1628 0%, #0e2240 45%, #0c1e3a 100%) !important;
+    }
+    .glass-panel {
+        background: rgba(255,255,255,0.055);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 16px;
+        transition: background 0.22s, border-color 0.22s, box-shadow 0.22s;
+    }
+    .glass-panel:hover {
+        background: rgba(255,255,255,0.09);
+        border-color: rgba(52,211,153,0.35);
+        box-shadow: 0 12px 36px rgba(16,185,129,0.18);
+    }
+</style>
+<div x-data="mukellefApp()" x-init="init()" class="min-h-screen" style="background: linear-gradient(135deg, #0a1628 0%, #0e2240 45%, #0c1e3a 100%);">
+    <div class="max-w-3xl mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center space-x-3">
+                <a href="/app" class="px-3 py-2 bg-white/10 hover:bg-white/15 rounded-lg text-white/70 font-medium transition-colors flex items-center text-sm border border-white/15">
+                    <i class="fas fa-arrow-left mr-2"></i>Geri Dön
+                </a>
+                <div>
+                    <h1 class="text-2xl font-bold text-white/90">Mükellef İşlemleri</h1>
+                    <p class="text-sm text-white/50">Mükellef ekle, sil ve yönet</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Mükellef Card -->
+        <div class="glass-panel p-6 mb-6">
+            <h2 class="text-lg font-bold text-white/90 mb-4"><i class="fas fa-user-plus mr-2 text-emerald-400"></i>Yeni Mükellef Ekle</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-semibold text-white/70 mb-1">Mükellef Adı / Unvanı <span class="text-red-400">*</span></label>
+                    <input type="text" x-model="newAd" @keyup.enter="ekle()"
+                           placeholder="Örn: ABC Tekstil Ltd. Şti."
+                           class="w-full px-3 py-2 border border-white/15 rounded-lg text-sm bg-white/10 text-white/90 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none placeholder-white/40">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-white/70 mb-1">VKN / TC Kimlik No</label>
+                    <input type="text" x-model="newVkn" @keyup.enter="ekle()"
+                           placeholder="Örn: 1234567890"
+                           class="w-full px-3 py-2 border border-white/15 rounded-lg text-sm bg-white/10 text-white/90 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none placeholder-white/40">
+                </div>
+            </div>
+            <div x-show="addError" x-cloak class="mb-3 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm" x-text="addError"></div>
+            <button @click="ekle()" type="button"
+                    class="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 border-2 border-emerald-500 transition-colors">
+                Mükellef Ekle
+            </button>
+        </div>
+
+        <!-- Mükellef Listesi -->
+        <div class="glass-panel p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold text-white/90"><i class="fas fa-users mr-2 text-emerald-400"></i>Mükellef Listesi</h2>
+                <span class="text-sm text-white/70 bg-white/10 px-3 py-1 rounded-full" x-text="`${filteredMukellefler.length} mükellef`"></span>
+            </div>
+
+            <!-- Search -->
+            <div class="mb-4">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40"></i>
+                    <input type="text" x-model="searchTerm" placeholder="Mükellef ara..."
+                           class="w-full pl-10 pr-4 py-2 border border-white/15 rounded-lg text-sm bg-white/10 text-white/90 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none placeholder-white/40">
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div x-show="loading" x-cloak class="text-center py-8">
+                <div class="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                <p class="text-white/50 text-sm">Yükleniyor...</p>
+            </div>
+
+            <!-- Empty state -->
+            <div x-show="!loading && mukellefler.length === 0" x-cloak class="text-center py-12">
+                <div class="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-users text-white/30 text-2xl"></i>
+                </div>
+                <p class="text-white/70 font-semibold">Henüz mükellef eklenmemiş</p>
+                <p class="text-white/50 text-sm mt-1">Yukarıdaki formu kullanarak ilk mükellefi ekleyin.</p>
+            </div>
+
+            <!-- No results -->
+            <div x-show="!loading && mukellefler.length > 0 && filteredMukellefler.length === 0" x-cloak class="text-center py-12">
+                <div class="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-search text-white/30 text-2xl"></i>
+                </div>
+                <p class="text-white/70 font-semibold">Sonuç bulunamadı</p>
+                <p class="text-white/50 text-sm mt-1">Farklı bir arama terimi deneyin.</p>
+            </div>
+
+            <!-- List -->
+            <div x-show="!loading && filteredMukellefler.length > 0" x-cloak class="space-y-3">
+                <template x-for="m in filteredMukellefler" :key="m.id">
+                    <div>
+                        <div class="flex items-center justify-between p-4 bg-white/10 rounded-lg border border-white/15 hover:border-emerald-500/50 transition-colors cursor-pointer" @click="toggleDonemler(m.id)">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-emerald-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-building text-emerald-400"></i>
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-white/90" x-text="m.ad"></p>
+                                    <p class="text-xs text-white/50" x-text="m.vkn ? 'VKN/TC: ' + m.vkn : 'VKN/TC girilmedi'"></p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs text-white/40" x-text="m.created_at ? new Date(m.created_at).toLocaleDateString('tr-TR') : ''"></span>
+                                <i class="fas fa-chevron-down text-white/40 text-sm transition-transform" :class="expandedMukellefId === m.id ? 'rotate-180' : ''"></i>
+                                <button @click.stop="sil(m.id, m.ad)"
+                                        class="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-xs font-semibold transition-colors border border-red-500/30">
+                                    <i class="fas fa-trash mr-1"></i>Sil
+                                </button>
+                            </div>
+                        </div>
+                        <!-- İade Dönemleri -->
+                        <div x-show="expandedMukellefId === m.id" x-cloak class="mt-2 ml-4 mr-4 mb-2 p-4 bg-white/10 rounded-lg border border-white/15">
+                            <div x-show="donemLoading[m.id]" class="text-center py-4">
+                                <div class="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                                <p class="text-white/50 text-sm">Yükleniyor...</p>
+                            </div>
+                            <div x-show="!donemLoading[m.id]">
+                                <div x-show="!donemler[m.id] || donemler[m.id].length === 0" class="text-center py-4">
+                                    <p class="text-white/50 text-sm">Henüz iade dönemi eklenmemiş</p>
+                                </div>
+                                <div x-show="donemler[m.id] && donemler[m.id].length > 0" class="space-y-2">
+                                    <p class="text-sm font-semibold text-white/70 mb-2">İade Dönemleri:</p>
+                                    <template x-for="d in donemler[m.id]" :key="d.id">
+                                        <div class="flex items-center justify-between p-3 bg-white/10 rounded-lg border border-white/15">
+                                            <span class="text-sm text-white/90 font-medium" x-text="d.etiket"></span>
+                                            <button @click="donemSil(m.id, d.id, d.etiket)"
+                                                    class="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-xs font-semibold transition-colors border border-red-500/30">
+                                                <i class="fas fa-trash mr-1"></i>Sil
+                                            </button>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirm Modal -->
+    <div x-show="showDeleteModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4"
+         style="background: rgba(15,23,42,0.78); backdrop-filter: blur(6px);" x-transition>
+        <div class="glass-panel p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div class="text-center mb-4">
+                <div class="w-14 h-14 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i class="fas fa-exclamation-triangle text-red-400 text-2xl"></i>
+                </div>
+                <h3 class="text-lg font-bold text-white/90">Mükellef Silinecek</h3>
+                <p class="text-sm text-white/70 mt-2">
+                    <span class="font-semibold text-red-400" x-text="deleteTarget.ad"></span>
+                    adlı mükellefi silmek istediğinize emin misiniz?
+                </p>
+                <p class="text-xs text-red-400 mt-2 font-semibold">Bu işlem geri alınamaz. Tüm veriler kalıcı olarak silinir.</p>
+            </div>
+            <div class="flex space-x-3">
+                <button @click="showDeleteModal = false"
+                        class="px-4 py-2 rounded-lg text-sm font-semibold text-white/90 bg-white/10 hover:bg-white/15 border border-white/15 transition-colors flex-1">
+                    İptal
+                </button>
+                <button @click="silOnayla()"
+                        class="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 border-2 border-red-500 transition-colors flex-1">
+                    <i class="fas fa-trash mr-2"></i>Sil
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Donem Delete Confirm Modal -->
+    <div x-show="showDonemDeleteModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4"
+         style="background: rgba(15,23,42,0.78); backdrop-filter: blur(6px);" x-transition>
+        <div class="glass-panel p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div class="text-center mb-4">
+                <div class="w-14 h-14 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i class="fas fa-exclamation-triangle text-red-400 text-2xl"></i>
+                </div>
+                <h3 class="text-lg font-bold text-white/90">Dönem Silinecek</h3>
+                <p class="text-sm text-white/70 mt-2">
+                    <span class="font-semibold text-red-400" x-text="donemDeleteTarget.etiket"></span>
+                    dönemini silmek istediğinize emin misiniz?
+                </p>
+                <p class="text-xs text-red-400 mt-2 font-semibold">Bu işlem geri alınamaz. Tüm veriler kalıcı olarak silinir.</p>
+            </div>
+            <div class="flex space-x-3">
+                <button @click="showDonemDeleteModal = false"
+                        class="px-4 py-2 rounded-lg text-sm font-semibold text-white/90 bg-white/10 hover:bg-white/15 border border-white/15 transition-colors flex-1">
+                    İptal
+                </button>
+                <button @click="donemSilOnayla()"
+                        class="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 border-2 border-red-500 transition-colors flex-1">
+                    <i class="fas fa-trash mr-2"></i>Sil
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function mukellefApp() {
+    return {
+        mukellefler: [],
+        loading: true,
+        newAd: '',
+        newVkn: '',
+        adding: false,
+        addError: '',
+        showDeleteModal: false,
+        deleteTarget: { id: '', ad: '' },
+        deleting: false,
+        expandedMukellefId: null,
+        donemler: {},
+        donemLoading: {},
+        showDonemDeleteModal: false,
+        donemDeleteTarget: { mukellefId: '', donemId: '', etiket: '' },
+        donemDeleting: false,
+        searchTerm: '',
+
+        get filteredMukellefler() {
+            if (!this.searchTerm.trim()) {
+                return this.mukellefler;
+            }
+            const term = this.searchTerm.toLowerCase();
+            return this.mukellefler.filter(m =>
+                m.ad.toLowerCase().includes(term) ||
+                (m.vkn && m.vkn.includes(term))
+            );
+        },
+
+        async init() {
+            await this.yukle();
+        },
+
+        getToken() {
+            return localStorage.getItem('session_token') || '';
+        },
+
+        async yukle() {
+            this.loading = true;
+            try {
+                const r = await fetch('/api/mukellef/list', {
+                    headers: { 'Authorization': `Bearer ${this.getToken()}` }
+                });
+                const d = await r.json();
+                if (d.success) this.mukellefler = d.mukellefler || [];
+            } catch (e) {
+                console.error('Mükellef yükleme hatası:', e);
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async ekle() {
+            this.addError = '';
+            if (!this.newAd.trim()) { this.addError = 'Mükellef adı boş olamaz.'; return; }
+            this.adding = true;
+            try {
+                const r = await fetch('/api/mukellef/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.getToken()}` },
+                    body: JSON.stringify({ ad: this.newAd.trim(), vkn: this.newVkn.trim() })
+                });
+                const d = await r.json();
+                if (d.success) {
+                    this.mukellefler.push(d.mukellef);
+                    this.newAd = '';
+                    this.newVkn = '';
+                } else {
+                    this.addError = d.error || 'Mükellef eklenemedi.';
+                }
+            } catch (e) {
+                this.addError = 'Bağlantı hatası: ' + e.message;
+            } finally {
+                this.adding = false;
+            }
+        },
+
+        sil(id, ad) {
+            this.deleteTarget = { id, ad };
+            this.showDeleteModal = true;
+        },
+
+        async silOnayla() {
+            this.deleting = true;
+            try {
+                const r = await fetch(`/api/mukellef/${this.deleteTarget.id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${this.getToken()}` }
+                });
+                const d = await r.json();
+                if (d.success) {
+                    this.mukellefler = this.mukellefler.filter(m => m.id !== this.deleteTarget.id);
+                    const activeMukellefId = localStorage.getItem('active_mukellef_id');
+                    if (activeMukellefId === this.deleteTarget.id) {
+                        localStorage.removeItem('active_mukellef_id');
+                        localStorage.removeItem('active_mukellef_ad');
+                    }
+                    this.showDeleteModal = false;
+                } else {
+                    alert(d.error || 'Silme işlemi başarısız.');
+                }
+            } catch (e) {
+                alert('Bağlantı hatası: ' + e.message);
+            } finally {
+                this.deleting = false;
+            }
+        },
+
+        toggleDonemler(mukellefId) {
+            if (this.expandedMukellefId === mukellefId) {
+                this.expandedMukellefId = null;
+            } else {
+                this.expandedMukellefId = mukellefId;
+                this.loadDonemler(mukellefId);
+            }
+        },
+
+        async loadDonemler(mukellefId) {
+            if (this.donemler[mukellefId]) return;
+            this.donemLoading[mukellefId] = true;
+            try {
+                const r = await fetch(`/api/mukellef/${mukellefId}/donem/list`, {
+                    headers: { 'Authorization': `Bearer ${this.getToken()}` }
+                });
+                const d = await r.json();
+                if (d.success) {
+                    this.donemler[mukellefId] = d.donemler || [];
+                } else {
+                    this.donemler[mukellefId] = [];
+                }
+            } catch (e) {
+                console.error('Dönem yükleme hatası:', e);
+                this.donemler[mukellefId] = [];
+            } finally {
+                this.donemLoading[mukellefId] = false;
+            }
+        },
+
+        donemSil(mukellefId, donemId, donemAd) {
+            this.donemDeleteTarget = { mukellefId, donemId, etiket: donemAd };
+            this.showDonemDeleteModal = true;
+        },
+
+        async donemSilOnayla() {
+            this.donemDeleting = true;
+            try {
+                const r = await fetch(`/api/mukellef/${this.donemDeleteTarget.mukellefId}/donem/${this.donemDeleteTarget.donemId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${this.getToken()}` }
+                });
+                const d = await r.json();
+                if (d.success) {
+                    this.donemler[this.donemDeleteTarget.mukellefId] = this.donemler[this.donemDeleteTarget.mukellefId].filter(d => d.id !== this.donemDeleteTarget.donemId);
+                    this.showDonemDeleteModal = false;
+                } else {
+                    alert(d.error || 'Dönem silme işlemi başarısız.');
+                }
+            } catch (e) {
+                alert('Bağlantı hatası: ' + e.message);
+            } finally {
+                this.donemDeleting = false;
+            }
+        }
+    }
+}
+</script>
+{% endblock %}

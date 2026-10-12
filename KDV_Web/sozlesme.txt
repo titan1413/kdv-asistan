@@ -1,0 +1,60 @@
+3065 ASİSTAN YAZILIM LİSANS, MESAFELİ SATIŞ VE KULLANIM ÇERÇEVE SÖZLEŞMESİ
+BÖLÜM 1: TARAFLARIN TANIMI VE HUKUKİ STATÜSÜ
+1.1. LİSANS VEREN: Mehmet Önder - 3065.com.tr Hizmet Sağlayıcısı. Yazılımın geliştiricisi ve tüm fikri mülkiyet haklarının tek sahibidir. İşbu sözleşmede Hizmet Sağlayıcı olarak anılacaktır.
+
+1.2. KULLANICI: Yazılımı 3065.com.tr üzerinden indiren, kuran, ücretsiz deneme sürümünü başlatan veya lisans bedelini ödeyerek kullanım hakkını elde eden; Mali Müşavir, Yeminli Mali Müşavir veya bu unvanlara sahip kişilerin yetkilendirdiği personeli ifade eder.
+
+1.3. TİCARİ BEYAN: KULLANICI, bu sözleşmeyi dijital olarak onaylayarak, söz konusu yazılımı mesleki ve ticari amaçlarla satın aldığını, dolayısıyla Türk Ticaret Kanunu hükümlerine tabi olduğunu ve 6502 sayılı Tüketici Kanunu'ndaki Tüketici tanımının dışında kaldığını peşinen kabul ve beyan eder.
+
+BÖLÜM 2: YAZILIMIN TEKNİK KAPSAMI VE LİSANS ŞARTLARI
+2.1. YAZILIMIN AMACI: 3065 Asistan, Katma Değer Vergisi Kanunu ve ilgili tebliğler uyarınca hazırlanan İndirilecek KDV, Yüklenilen KDV ve İmalat listelerinin kontrolü, analizi ve GİB formatına uygun raporlanması süreçlerinde otomasyon sağlayan yardımcı bir araçtır.
+
+2.2. LİSANSIN SINIRI: Bu bir Gayrimaddi Hak kullanım lisansıdır. Yazılımın mülkiyeti, algoritması, tasarım hakları ve kaynak kodları Hizmet Sağlayıcı'ya aittir. KULLANICI, yazılımı kiralayamaz, satamaz, alt lisans veremez veya herhangi bir şekilde gelir paylaşımı modeline konu edemez.
+
+2.3. LİSANS SÜRELERİ: Yazılım; 1 aylık, 6 aylık ve 12 aylık paketler halinde sunulmaktadır. KULLANICI, seçtiği pakete ait bedeli ödediği andan itibaren ilgili süre boyunca yazılımı kullanma hakkına sahip olur.
+
+2.4. CİHAZ SINIRI: Her lisans anahtarı, 1 kullanıcı için tanımlanmış olup en fazla 2 ayrı bilgisayarda aktivasyona izin verir. Kullanıcı, bilgisayar değişikliği durumunda yılda en fazla 2 kez cihaz sıfırlama talebinde bulunabilir.
+
+2.5. FİYAT GÜNCELLEME: Lisans süresi sonunda yapılacak yeni satın alımlarda veya yenilemelerde, Hizmet Sağlayıcı güncel piyasa koşullarına göre lisans bedellerinde değişiklik yapma hakkını saklı tutar. KULLANICI, yenileme dönemindeki güncel fiyat listesini kabul ederek işlem yapar.
+
+BÖLÜM 3: HUKUKİ SORUMLULUK SINIRLANDIRILMASI VE TAAHHÜTLER
+3.1. MEVZUAT VE GİB SİSTEMLERİ: Vergi mevzuatı ve GİB İnternet Vergi Dairesi sistemleri değişken yapıdadır. Yazılım mevcut sürümlerle stabil çalışmayı amaçlar; ancak mevzuat değişikliklerinin yazılıma entegrasyonu sürecinde oluşabilecek hesaplama farklılıklarından KULLANICI sorumludur.
+
+3.2. VERİ GİRİŞİ VE KAYNAK DOSYALAR: Yazılımın ürettiği raporların doğruluğu, KULLANICI tarafından sisteme yüklenen dosyaların tamlığına ve doğruluğuna bağlıdır. Hatalı kaynak dosya yüklenmesi sonucu oluşan raporlama hatalarından Hizmet Sağlayıcı sorumlu tutulamaz.
+
+3.3. NİHAİ KONTROL YÜKÜMLÜLÜĞÜ: 3065 Asistan bir Karar Destek Mekanizmasıdır ve vergi danışmanlığı hizmeti yerine geçmez. Yazılımın sunduğu tüm veriler ve raporlar öneri niteliğindedir. Bu çıktıların doğruluğunu kontrol etme ve GİB sistemlerine onaylama öncesi son denetimi yapma sorumluluğu münhasıran KULLANICI'ya aittir.
+
+3.4. TAZMİNAT SINIRI: Yazılımın kullanımı sırasında meydana gelebilecek veri kaybı, kâr mahrumiyeti, yanlış vergi beyanı veya vergi ziyaı cezası gibi durumlardan dolayı Hizmet Sağlayıcı'nın maddi sorumluluğu, KULLANICI'nın satın aldığı mevcut lisans dönemi için ödediği bedelin %100'ünü hiçbir şart altında geçemez.
+
+BÖLÜM 4: CAYMA HAKKI VE İADE PROSEDÜRLERİ
+4.1. CAYMA HAKKI İSTİSNASI: Mesafeli Sözleşmeler Yönetmeliği’nin 15/ğ maddesi gereğince; elektronik ortamda anında ifa edilen hizmetlerde cayma hakkı kullanılamaz. KULLANICI, lisans anahtarını aktive ettiği an bu hakkından feragat etmiş sayılır.
+
+4.2. DENEME SÜRÜMÜ VE UYUM: KULLANICI, satın alma öncesinde ücretsiz deneme sürümünü kullanarak kendi donanımıyla uyumluluğunu test etmekle yükümlüdür. Aktivasyon sonrası bildirilen donanımsal uyumsuzluklar iade gerekçesi oluşturmaz.
+
+BÖLÜM 5: FİKRİ MÜLKİYETİN KORUNMASI VE CEZAİ ŞARTLAR
+5.1. TERSİNE MÜHENDİSLİK YASAĞI: KULLANICI, yazılımın kodlarını kırmaya, kaynak koda ulaşmaya veya lisans kontrol mekanizmalarını devre dışı bırakmaya yönelik girişimlerde bulunamaz.
+
+5.2. CEZAİ ŞART: 5.1 maddesinin ihlali durumunda KULLANICI, Hizmet Sağlayıcı'ya uğradığı zararlar saklı kalmak kaydıyla, güncel lisans bedelinin 50 katı tutarında cezai şart ödemeyi kabul ve taahhüt eder.
+
+BÖLÜM 6: VERİ GİZLİLİĞİ VE SİBER GÜVENLİK
+6.1. YEREL ÇALIŞMA İLKESİ: 3065 Asistan, mükellef verilerini bulut sunuculara yüklemez. Tüm analiz işlemleri KULLANICI'nın bilgisayarında lokal olarak gerçekleşir.
+
+6.2. GÜVENLİK SORUMLULUĞU: KULLANICI'nın bilgisayarına bulaşan virüsler veya kullanıcı ihmali sonucu lisans anahtarının çalınmasından Hizmet Sağlayıcı sorumlu değildir.
+
+BÖLÜM 7: GÜNCELLEME, BAKIM VE MÜCBİR SEBEPLER
+7.1. BAKIM ÇALIŞMALARI: Hizmet Sağlayıcı, lisans doğrulama sunucuları üzerinde önceden bildirmeksizin bakım çalışması yapabilir. Bu süre zarfındaki kısa süreli kesintiler sözleşmeye aykırılık teşkil etmez.
+
+7.2. MÜCBİR SEBEPLER: GİB sistemlerindeki teknik arızalar, genel internet altyapı sorunları veya doğal afetler gibi Hizmet Sağlayıcı'nın kontrolü dışındaki durumlarda hizmetin aksamasından dolayı sorumluluk kabul edilmez.
+
+BÖLÜM 8: SÖZLEŞMENİN FESHİ
+8.1. HAKLI FESİH: KULLANICI’nın işbu sözleşmede yer alan kullanım şartlarını veya fikri mülkiyet haklarını ihlal etmesi durumunda; Hizmet Sağlayıcı sözleşmeyi hiçbir tazminat ödemeksizin tek taraflı olarak feshedebilir ve yazılım erişimini kapatabilir.
+
+8.2. HİZMETİN SONLANDIRILMASI: Hizmet Sağlayıcı, yazılımın geliştirilmesini veya desteğini durdurmaya karar verirse, KULLANICI’ya 30 gün önceden bildirmek kaydıyla sözleşmeyi feshedebilir. Bu durumda varsa kalan kullanım süresine tekabül eden bedel iade edilir.
+
+BÖLÜM 9: DELİL SÖZLEŞMESİ VE YETKİ
+9.1. KESİN DELİL: Taraflar, olası bir ihtilafta Hizmet Sağlayıcı'ya ait sunucu kayıtları ve veritabanı loglarının HMK 193. madde uyarınca kesin delil niteliğinde olduğunu kabul ederler.
+
+9.2. YETKİLİ MERCİİ: İşbu sözleşmeden doğacak her türlü uyuşmazlığın çözümünde Gaziantep Mahkemeleri ve İcra Daireleri yetkilidir.
+
+BÖLÜM 10: YÜRÜRLÜK VE KABUL
+KULLANICI, web sitesi üzerinden üyelik kaydını tamamlayıp Okudum, Onaylıyorum kutucuğunu işaretleyerek işbu 10 bölümden oluşan sözleşmeyi tüm yasal ve mali sonuçlarıyla birlikte kabul etmiş sayılır.

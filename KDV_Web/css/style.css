@@ -1,0 +1,37 @@
+:root {
+    --primary: #1e3a8a; /* Koyu Lacivert */
+    --secondary: #475569; /* Kurumsal Gri */
+    --accent: #2563eb; /* Canlı Mavi (Butonlar için) */
+    --bg: #f8fafc;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg);
+    color: var(--secondary);
+    line-height: 1.6;
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: bold;
+}
+/* Görsellerin Mobilde Kırılmasını ve Taşmasını Engeller */
+img {
+    max-width: 100%;
+    height: auto;
+    display: block; /* Altındaki boşluğu alır */
+}
+
+/* assets içindeki görsellerin mobilde düzgün yüklenmesi için 
+   dosya isimlerinin küçük harf olduğundan emin ol (Örn: 1ind.jpg) */
+@media (max-width: 768px) {
+    .aspect-video {
+        aspect-ratio: 16 / 9;
+        width: 100% !important;
+    }
+}

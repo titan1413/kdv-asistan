@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Hata/Öneri Bildir - KDV Asistan{% endblock %}
+
+{% block navigation %}
+{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        background: linear-gradient(135deg, #0a1628 0%, #0e2240 45%, #0c1e3a 100%) !important;
+    }
+    .glass-panel {
+        background: rgba(255,255,255,0.055);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 16px;
+        transition: background 0.22s, border-color 0.22s, box-shadow 0.22s;
+    }
+    .glass-panel:hover {
+        background: rgba(255,255,255,0.09);
+        border-color: rgba(251,191,36,0.35);
+        box-shadow: 0 12px 36px rgba(245,158,11,0.18);
+    }
+</style>
+<div class="min-h-screen flex items-center justify-center" style="background: linear-gradient(135deg, #0a1628 0%, #0e2240 45%, #0c1e3a 100%);" x-data="{
+    message: '',
+    sending: false,
+    showSuccess: false,
+    showError: false,
+    errorMessage: ''
+}">
+    <div class="max-w-lg w-full mx-4">
+        <div class="glass-panel p-8">
+            <!-- Header -->
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-lightbulb text-amber-400 text-2xl"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-white/90 mb-2">Hata veya Öneri Bildir</h1>
+                <p class="text-white/50 text-sm">Görüşleriniz sistemin gelişimi için çok değerlidir.<br>Lütfen mesajınızı aşağıya bırakın.</p>
+            </div>
+
+            <!-- Success Message -->
+            <div x-show="showSuccess" x-cloak x-transition class="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
+                <div class="flex items-center">
+                    <i class="fas fa-check-circle text-emerald-400 text-xl mr-3"></i>
+                    <p class="text-emerald-400 font-medium">Bildiriminiz doğrudan geliştiriciye iletildi. Teşekkürler!</p>
+                </div>
+            </div>
+
+            <!-- Error Message -->
+            <div x-show="showError" x-cloak x-transition class="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
+                <div class="flex items-center">
+                    <i class="fas fa-exclamation-circle text-red-400 text-xl mr-3"></i>
+                    <p class="text-red-400 font-medium" x-text="errorMessage"></p>
+                </div>
+            </div>
+
+            <!-- Form -->
+            <div x-show="!showSuccess">
+                <div class="mb-6">
+                    <textarea
+                        x-model="message"
+                        id="feedback-message"
+                        rows="8"
+                        class="w-full px-4 py-3 border border-white/15 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none text-white/90 text-sm bg-white/10 placeholder-white/40"
+                        placeholder="Mesajınızı buraya yazın..."
+                        :disabled="sending"
+                    ></textarea>
+                </div>
+
+                <button
+                    @click="sendFeedback"
+                    :disabled="sending || !message.trim()"
+                    class="w-full py-3 px-6 bg-amber-600 hover:bg-amber-700 disabled:bg-white/10 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-300 flex items-center justify-center border-2 border-amber-500"
+                >
+                    <i x-show="!sending" class="fas fa-paper-plane mr-2"></i>
+                    <i x-show="sending" x-cloak class="fas fa-spinner fa-spin mr-2"></i>
+                    <span x-text="sending ? 'Gönderiliyor...' : 'Mesajı İlet'"></span>
+                </button>
+            </div>
+
+            <!-- Back to Home -->
+            <div class="mt-6 text-center">
+                <a href="/app" class="text-amber-300 hover:text-amber-200 font-medium text-sm border border-white/15 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 transition-colors inline-flex items-center">
+                    <i class="fas fa-arrow-left mr-2"></i>Ana Menüye Dön
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function sendFeedback() {
+            if (!this.message.trim()) return;
+            
+            this.sending = true;
+            this.showError = false;
+            
+            const token = localStorage.getItem('session_token');
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = 'Bearer ' + token;
+
+            fetch('/send-feedback', {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify({ message: this.message })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.showSuccess = true;
+                    this.message = '';
+                } else {
+                    this.showError = true;
+                    this.errorMessage = data.error || 'Mesaj iletilemedi.';
+                }
+            })
+            .catch(error => {
+                this.showError = true;
+                this.errorMessage = 'Mesaj iletilemedi. Lütfen internetinizi kontrol edin.';
+            })
+            .finally(() => {
+                this.sending = false;
+            });
+        }
+    </script>
+</div>
+{% endblock %}

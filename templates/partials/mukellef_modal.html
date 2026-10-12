@@ -1,0 +1,307 @@
+<!-- Mükellef / Dönem Seçim Modalı (2 adım) -->
+    <div x-show="showMukellefModal" x-cloak
+         class="fixed inset-0 z-50 flex items-center justify-center p-4"
+         style="background: rgba(15,23,42,0.78); backdrop-filter: blur(6px);"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0">
+
+        <div class="glass-panel rounded-xl shadow-lg border border-white/15 w-full max-w-2xl overflow-hidden flex flex-col"
+             style="max-height: 92vh;">
+
+            <!-- ── Header + Step Indicator ── -->
+            <div class="flex-shrink-0 bg-white/5 border-b border-white/10" style="padding: 18px 24px 16px;">
+                <div class="flex items-center gap-3">
+                    <!-- Step 1 -->
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 flex-shrink-0"
+                             :class="modalStep === 'mukellef' ? 'bg-teal-600 text-white' : 'bg-white/20 text-white/60'">
+                            <span x-show="modalStep === 'mukellef'">1</span>
+                            <i x-show="modalStep === 'donem'" class="fas fa-check" style="font-size:10px;"></i>
+                        </div>
+                        <span class="text-xs font-semibold transition-colors duration-300 whitespace-nowrap"
+                              :class="modalStep === 'mukellef' ? 'text-teal-400' : 'text-white/50'">Mükellef</span>
+                    </div>
+                    <!-- Connector line -->
+                    <div class="flex-1 h-px rounded-full transition-all duration-500"
+                         :class="modalStep === 'donem' ? 'bg-teal-500' : 'bg-white/20'"></div>
+                    <!-- Step 2 -->
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 flex-shrink-0"
+                             :class="modalStep === 'donem' ? 'bg-teal-700 text-white' : 'bg-white/20 text-white/60'">
+                            2
+                        </div>
+                        <span class="text-xs font-semibold transition-colors duration-300 whitespace-nowrap"
+                              :class="modalStep === 'donem' ? 'text-teal-400' : 'text-white/50'">Dönem</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Scrollable body ── -->
+            <div class="flex-1 overflow-y-auto">
+
+                <!-- ════ ADIM 1: Mükellef Seç ════ -->
+                <div x-show="modalStep === 'mukellef'" class="p-6">
+
+                    <!-- Title row -->
+                    <div class="flex items-center gap-3 mb-5">
+                        <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-teal-500/20">
+                            <i class="fas fa-users text-teal-400"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-bold text-white/90 leading-tight">Mükellef Seçin</h3>
+                            <p class="text-xs text-white/50 mt-0.5">İşlem yapılacak mükellefi seçin</p>
+                        </div>
+                    </div>
+
+                    <!-- Loading skeleton -->
+                    <div x-show="mukellefListeLoading" class="flex flex-col items-center py-10 gap-3">
+                        <div class="w-8 h-8 border-2 border-white/20 border-t-transparent rounded-full animate-spin"></div>
+                        <p class="text-xs text-white/50">Yükleniyor…</p>
+                    </div>
+
+                    <!-- Empty state -->
+                    <div x-show="!mukellefListeLoading && mukellefListe.length === 0" class="text-center py-8">
+                        <div class="w-16 h-16 rounded-lg flex items-center justify-center mx-auto mb-4 bg-white/10">
+                            <i class="fas fa-users text-white/30 text-2xl"></i>
+                        </div>
+                        <p class="text-sm font-bold text-white/70 mb-1">Henüz mükellef eklenmemiş</p>
+                        <p class="text-xs text-white/50 mb-5">Mükellef işlemleri sayfasından ekleyebilirsiniz.</p>
+                        <a href="/mukellef-islemleri"
+                           class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white/90 bg-white/10 border border-white/15 hover:bg-white/15 hover:border-white/20 transition-all">
+                            <i class="fas fa-plus text-xs"></i>Mükellef Ekle
+                        </a>
+                    </div>
+
+                    <!-- Arama Barı -->
+                    <div x-show="!mukellefListeLoading && mukellefListe.length > 0" class="mb-4">
+                        <div class="relative">
+                            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm"></i>
+                            <input type="text"
+                                   x-model="mukellefArama"
+                                   placeholder="Mükellef adı veya VKN ile ara..."
+                                   class="w-full pl-10 pr-4 py-2.5 border border-white/15 rounded-lg text-sm focus:ring-2 focus:ring-white/20 focus:border-white/20 outline-none transition-all bg-white/10 text-white/90 placeholder-white/40">
+                            <button x-show="mukellefArama" @click="mukellefArama = ''"
+                                    class="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60 transition-colors">
+                                <i class="fas fa-times text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- List -->
+                    <div x-show="!mukellefListeLoading && mukellefListe.length > 0"
+                         class="space-y-2 mb-5" style="max-height:400px;overflow-y:auto;">
+                        <template x-for="m in filteredMukellefListe" :key="m.id">
+                            <button @click="mukellefSec(m)"
+                                    class="w-full flex items-center gap-3 p-3 rounded-lg border border-white/15 bg-white/10 hover:border-white/20 hover:bg-white/15 transition-all text-left group">
+                                <!-- Avatar initial -->
+                                <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 text-sm font-bold bg-white/20 text-white/70"
+                                     x-text="(m.ad || '?').charAt(0).toUpperCase()">
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-semibold text-white/90 text-sm truncate" x-text="m.ad"></p>
+                                    <p class="text-xs text-white/50 mt-0.5"
+                                       x-text="m.vkn ? 'VKN: ' + m.vkn : 'VKN belirtilmemiş'"></p>
+                                </div>
+                                <i class="fas fa-chevron-right text-white/40 text-xs flex-shrink-0 transition-colors group-hover:text-white/60"></i>
+                            </button>
+                        </template>
+                        <div x-show="filteredMukellefListe.length === 0" class="text-center py-8">
+                            <p class="text-sm text-white/50">Aramanızla eşleşen mükellef bulunamadı</p>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="flex items-center justify-between pt-4 border-t border-white/10">
+                        <a href="/mukellef-islemleri"
+                           class="inline-flex items-center gap-1.5 text-xs font-semibold text-white/70 hover:text-white/90 transition-colors">
+                            <i class="fas fa-plus-circle"></i>Yeni Mükellef Ekle
+                        </a>
+                        <a href="/app"
+                           class="inline-flex items-center gap-1.5 text-xs text-white/50 hover:text-white/70 transition-colors">
+                            <i class="fas fa-arrow-left text-xs"></i>Ana Menüye Dön
+                        </a>
+                    </div>
+                </div>
+
+                <!-- ════ ADIM 2: Dönem Seç ════ -->
+                <div x-show="modalStep === 'donem'" class="p-6">
+
+                    <!-- Title row -->
+                    <div class="flex items-center gap-3 mb-5">
+                        <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-teal-500/20">
+                            <i class="fas fa-calendar-alt text-teal-400"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-bold text-white/90 leading-tight">Dönem Seçin</h3>
+                            <p class="text-xs text-white/50 mt-0.5">
+                                <span class="font-semibold text-white/70" x-text="activeMukellefAd"></span> için dönem seçin
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Loading -->
+                    <div x-show="donemListeLoading" class="flex flex-col items-center py-10 gap-3">
+                        <div class="w-8 h-8 border-2 border-white/20 border-t-transparent rounded-full animate-spin"></div>
+                        <p class="text-xs text-white/50">Yükleniyor…</p>
+                    </div>
+
+                    <div x-show="!donemListeLoading">
+
+                        <!-- Empty state -->
+                        <div x-show="donemListe.length === 0" class="text-center py-6 mb-3">
+                            <div class="w-16 h-16 rounded-lg flex items-center justify-center mx-auto mb-4 bg-white/10">
+                                <i class="fas fa-calendar-times text-white/30 text-2xl"></i>
+                            </div>
+                            <p class="text-sm font-bold text-white/70 mb-1">Henüz dönem eklenmemiş</p>
+                            <p class="text-xs text-white/50 mb-5">Aşağıdan ilk dönemi ekleyebilirsiniz.</p>
+                            <button @click="toggleDonemEkleForm()"
+                                    class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white/90 bg-white/10 border border-white/15 hover:bg-white/15 hover:border-white/20 transition-all">
+                                <i class="fas fa-plus text-xs"></i>İlk Dönem Ekle
+                            </button>
+                        </div>
+
+                        <!-- Arama Barı -->
+                        <div x-show="donemListe.length > 0 && !showDonemEkleForm" class="mb-4">
+                            <div class="relative">
+                                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm"></i>
+                                <input type="text"
+                                       x-model="donemArama"
+                                       placeholder="Dönem ile ara..."
+                                       class="w-full pl-10 pr-4 py-2.5 border border-white/15 rounded-lg text-sm focus:ring-2 focus:ring-white/20 focus:border-white/20 outline-none transition-all bg-white/10 text-white/90 placeholder-white/40">
+                                <button x-show="donemArama" @click="donemArama = ''"
+                                        class="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60 transition-colors">
+                                    <i class="fas fa-times text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Dönem listesi -->
+                        <div class="space-y-2 mb-3" style="max-height:350px;overflow-y:auto;">
+                            <template x-for="d in filteredDonemListe" :key="d.id">
+                                <button @click="donemSec(d)"
+                                        class="w-full flex items-center gap-3 p-3 rounded-lg border transition-all text-left"
+                                        :class="activeDonemId === d.id
+                                            ? 'border-teal-500 bg-teal-500/10'
+                                            : 'border-white/15 bg-white/10 hover:border-white/20 hover:bg-white/15'">
+                                    <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-all"
+                                         :class="activeDonemId === d.id
+                                             ? 'bg-teal-500'
+                                             : 'bg-white/20'">
+                                        <i :class="activeDonemId === d.id
+                                               ? 'fas fa-check text-white'
+                                               : 'fas fa-calendar text-white/60'"
+                                           class="text-sm"></i>
+                                    </div>
+                                    <span class="flex-1 font-semibold text-sm" x-text="d.etiket" :class="activeDonemId === d.id ? 'text-teal-400' : 'text-white/90'"></span>
+                                    <span x-show="activeDonemId === d.id"
+                                          class="text-xs font-semibold px-2 py-0.5 rounded-full bg-teal-500 text-white">Seçili</span>
+                                </button>
+                            </template>
+                            <div x-show="filteredDonemListe.length === 0" class="text-center py-8">
+                                <p class="text-sm text-white/50">Aramanızla eşleşen dönem bulunamadı</p>
+                            </div>
+                        </div>
+
+                        <!-- Yeni Dönem Ekle — dashed CTA -->
+                        <div x-show="donemListe.length > 0 && !showDonemEkleForm" class="mb-3">
+                            <button @click="toggleDonemEkleForm()"
+                                    class="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border-2 border-dashed border-white/20 text-sm font-semibold text-white/50 hover:border-white/30 hover:text-white/70 hover:bg-white/10 transition-all">
+                                <i class="fas fa-plus text-xs"></i>Yeni Dönem Ekle
+                            </button>
+                        </div>
+
+                        <!-- ── Dönem Ekleme Formu ── -->
+                        <div x-show="showDonemEkleForm" x-cloak x-transition
+                             class="rounded-lg border border-white/15 p-4 mb-3 bg-white/10">
+
+                            <!-- Form header -->
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center">
+                                        <i class="fas fa-calendar-alt text-white/60" style="font-size:10px;"></i>
+                                    </div>
+                                    <p class="text-xs font-bold text-white/90">Yeni Dönem Ekle</p>
+                                </div>
+                                <button @click="toggleDonemEkleForm()"
+                                        class="w-6 h-6 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors">
+                                    <i class="fas fa-times text-white/60" style="font-size:10px;"></i>
+                                </button>
+                            </div>
+
+                            <!-- Ay / Yıl seçiciler -->
+                            <div class="grid grid-cols-3 gap-2 mb-3">
+                                <div>
+                                    <label class="block text-xs font-semibold text-white/50 mb-1">Başlangıç</label>
+                                    <select x-model="donemBaslangicAy"
+                                            class="w-full px-2 py-1.5 border border-white/15 rounded-lg text-xs bg-white/10 text-white/90 focus:ring-2 focus:ring-white/20 focus:border-white/20 outline-none"
+                                            style="background-color: rgba(255,255,255,0.1);">
+                                        <template x-for="(ad, idx) in aylar" :key="idx">
+                                            <option :value="idx + 1" x-text="ad" style="background-color: #1e293b; color: white;"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-white/50 mb-1">Bitiş</label>
+                                    <select x-model="donemBitisAy"
+                                            class="w-full px-2 py-1.5 border border-white/15 rounded-lg text-xs bg-white/10 text-white/90 focus:ring-2 focus:ring-white/20 focus:border-white/20 outline-none"
+                                            style="background-color: rgba(255,255,255,0.1);">
+                                        <template x-for="(ad, idx) in aylar" :key="idx">
+                                            <option :value="idx + 1" x-text="ad" style="background-color: #1e293b; color: white;"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-white/50 mb-1">Yıl</label>
+                                    <select x-model="donemYil"
+                                            class="w-full px-2 py-1.5 border border-white/15 rounded-lg text-xs bg-white/10 text-white/90 focus:ring-2 focus:ring-white/20 focus:border-white/20 outline-none"
+                                            style="background-color: rgba(255,255,255,0.1);">
+                                        <template x-for="y in donemYillar" :key="y">
+                                            <option :value="y" x-text="y" style="background-color: #1e293b; color: white;"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Preview + Ekle -->
+                            <div class="flex items-center gap-2">
+                                <div class="flex-1 flex items-center gap-2 px-3 py-2 bg-white/10 border border-white/15 rounded-lg">
+                                    <i class="fas fa-tag text-white/40 text-xs"></i>
+                                    <span class="text-xs font-bold text-white/90" x-text="donemEtiketOnizle()"></span>
+                                </div>
+                                <button @click="donemEkle()" :disabled="donemEkleLoading"
+                                        class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 border-2 border-teal-500 transition-all disabled:opacity-50">
+                                    <span x-show="!donemEkleLoading" class="flex items-center gap-1.5">
+                                        <i class="fas fa-plus text-xs"></i>Ekle
+                                    </span>
+                                    <span x-show="donemEkleLoading">
+                                        <i class="fas fa-spinner fa-spin text-xs"></i>
+                                    </span>
+                                </button>
+                            </div>
+
+                            <!-- Hata mesajı -->
+                            <div x-show="donemEkleHata"
+                                 class="flex items-center gap-1.5 mt-2 px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10">
+                                <i class="fas fa-exclamation-circle text-red-400 text-xs flex-shrink-0"></i>
+                                <p class="text-xs text-red-400" x-text="donemEkleHata"></p>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="flex items-center pt-3 border-t border-white/10">
+                        <button @click="modalStep = 'mukellef'; mukellefModalAc()"
+                                class="inline-flex items-center gap-1.5 text-xs font-semibold text-white/50 hover:text-white/70 transition-colors">
+                            <i class="fas fa-arrow-left text-xs"></i>Mükellef Değiştir
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
